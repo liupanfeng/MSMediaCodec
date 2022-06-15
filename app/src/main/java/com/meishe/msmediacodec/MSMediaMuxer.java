@@ -46,7 +46,13 @@ public class MSMediaMuxer {
     private int mAudioTrackIndex = -1;
     private boolean mIsVideoAdd;
     private boolean mIsAudioAdd;
+    /**
+     * 视频通道
+     */
     private MSVideoChannel mVideoChannel;
+    /**
+     * 音频通道
+     */
     private MSAudioChannel mAudioChannel;
     private MSMediaCodec mAVEncoder;
     private boolean mIsMediaMuxerStart;
@@ -64,6 +70,10 @@ public class MSMediaMuxer {
         private static MSMediaMuxer instance=new MSMediaMuxer();
     }
 
+    /**
+     * 初始化混合器
+     * @param outfile
+     */
     public void initMediaMuxer(String outfile) {
         if (mLoop) {
             throw new RuntimeException(" MediaMuxer线程已经启动");
@@ -83,10 +93,10 @@ public class MSMediaMuxer {
         mSubscribe = Observable.just(1).observeOn(Schedulers.io()).subscribe(new Consumer<Integer>() {
             @Override
             public void accept(Integer integer) throws Exception {
-                //混合器未开启
+                /*混合器未开启*/
                 synchronized (lock) {
                     try {
-                        Log.d(TAG, " 媒体混合器等待开启...");
+                        Log.d(TAG, "媒体混合器等待开启");
                         lock.wait();
                     } catch (InterruptedException e) {
                         e.printStackTrace();
@@ -226,11 +236,11 @@ public class MSMediaMuxer {
             @Override
             public void outputVideoFrame(final int trackIndex, final ByteBuffer outBuf, final MediaCodec.BufferInfo bufferInfo) {
                 try {
-                    Log.d(TAG, " outputVideoFrame=====");
+                    Log.d(TAG, "视频通道压缩后的数据，加入混合器队列");
                     mMuxerDatas.put(new MuxerData(
                             trackIndex, outBuf, bufferInfo));
                 } catch (InterruptedException e) {
-                    Log.e(TAG, " outputVideoFrame=====error: " + e.toString());
+                    Log.e(TAG, " 视频通道压缩后的数据，加入混合器队列 error: " + e.toString());
                     e.printStackTrace();
                 }
             }
@@ -238,11 +248,11 @@ public class MSMediaMuxer {
             @Override
             public void outputAudioFrame(final int trackIndex,final ByteBuffer outBuf,final MediaCodec.BufferInfo bufferInfo) {
                 try {
-                    Log.d(TAG, " outputAudioFrame=====");
+                    Log.d(TAG, "音频通道的数据加入混合器");
                     mMuxerDatas.put(new MuxerData(
                             trackIndex, outBuf, bufferInfo));
                 } catch (InterruptedException e) {
-                    Log.e(TAG, " outputAudioFrame=====error: "+e.toString());
+                    Log.e(TAG, " 音频通道的数据加入混合器 error: "+e.toString());
                     e.printStackTrace();
                 }
             }
@@ -250,13 +260,13 @@ public class MSMediaMuxer {
             @Override
             public void outMediaFormat(final int trackIndex, MediaFormat mediaFormat) {
                 if (trackIndex == TRACK_AUDIO) {
-                    Log.d(TAG, " addAudioMediaFormat======mediaMuxer: " + (mMediaMuxer != null));
+                    Log.d(TAG, " outMediaFormat mediaMuxer: " + (mMediaMuxer != null));
                     if (mMediaMuxer != null) {
                         mAudioTrackIndex = mMediaMuxer.addTrack(mediaFormat);
                         mIsAudioAdd = true;
                     }
                 } else if (trackIndex == TRACK_VIDEO) {
-                    Log.d(TAG, " addVideoMediaFormat=======mediaMuxer: " + (mMediaMuxer != null));
+                    Log.d(TAG, " outMediaFormat mediaMuxer: " + (mMediaMuxer != null));
                     if (mMediaMuxer != null) {
                         mVideoTrackIndex = mMediaMuxer.addTrack(mediaFormat);
                         mIsVideoAdd = true;
