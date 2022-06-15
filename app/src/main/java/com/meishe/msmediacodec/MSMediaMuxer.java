@@ -37,20 +37,20 @@ public class MSMediaMuxer {
 
     public void initMediaMuxer(String outfile) {
         if (loop) {
-            throw new RuntimeException("====zhongjihao====MediaMuxer线程已经启动===");
+            throw new RuntimeException(" MediaMuxer线程已经启动===");
         }
         try {
-            Log.d(TAG, "====zhongjihao=====创建媒体混合器 start...");
+            Log.d(TAG, " 创建媒体混合器 start...");
             mediaMuxer = new MediaMuxer(outfile, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
-            Log.d(TAG, "====zhongjihao=====创建媒体混合器 done...");
+            Log.d(TAG, " 创建媒体混合器 done...");
         }catch (Exception e){
             e.printStackTrace();
-            Log.e(TAG, "====zhongjihao=====创建媒体混合器 error: "+e.toString());
+            Log.e(TAG, " 创建媒体混合器 error: "+e.toString());
         }
         mVideoGather = MSVideoChannel.getInstance();
         mAudioGather = MSAudioChannel.getInstance();
-        mAVEncoder = MSMediaCodec.newInstance();
-        Log.d(TAG, "====zhongjihao======设置回调监听===");
+        mAVEncoder = MSMediaCodec.getInstance();
+        Log.d(TAG, " 设置回调监听===");
         setListener();
         workThread = new Thread("mediaMuxer-thread") {
             @Override
@@ -58,7 +58,7 @@ public class MSMediaMuxer {
                 //混合器未开启
                 synchronized (lock) {
                     try {
-                        Log.d(TAG, "====zhongjihao=====媒体混合器等待开启...");
+                        Log.d(TAG, " 媒体混合器等待开启...");
                         lock.wait();
                     } catch (InterruptedException e) {
                         e.printStackTrace();
@@ -73,17 +73,17 @@ public class MSMediaMuxer {
                         } else if(data.trackIndex == TRACK_AUDIO){
                             track = audioTrackIndex;
                         }
-                        Log.d(TAG, "====zhongjihao====track: "+track+"    写入混合数据大小 " + data.bufferInfo.size);
+                        Log.d(TAG, " track: "+track+"    写入混合数据大小 " + data.bufferInfo.size);
                         //添加数据
                         mediaMuxer.writeSampleData(track, data.byteBuf, data.bufferInfo);
                     } catch (InterruptedException e) {
-                        Log.e(TAG, "===zhongjihao====写入混合数据失败!" + e.toString());
+                        Log.e(TAG, " 写入混合数据失败!" + e.toString());
                         e.printStackTrace();
                     }
                 }
                 muxerDatas.clear();
                 stopMediaMuxer();
-                Log.d(TAG, "=====zhongjihao====媒体混合器退出...");
+                Log.d(TAG, " 媒体混合器退出...");
             }
         };
 
@@ -139,7 +139,7 @@ public class MSMediaMuxer {
             return;
         synchronized (lock) {
             if (isAudioAdd && isVideoAdd) {
-                Log.d(TAG, "====zhongjihao====启动媒体混合器=====");
+                Log.d(TAG, " 启动媒体混合器=====");
                 mediaMuxer.start();
                 isMediaMuxerStart = true;
                 lock.notify();
@@ -155,7 +155,7 @@ public class MSMediaMuxer {
         isMediaMuxerStart = false;
         isAudioAdd = false;
         isVideoAdd = false;
-        Log.d(TAG, "====zhongjihao====停止媒体混合器=====");
+        Log.d(TAG, " 停止媒体混合器 ");
     }
 
     /**
@@ -193,11 +193,11 @@ public class MSMediaMuxer {
             @Override
             public void outputVideoFrame(final int trackIndex, final ByteBuffer outBuf, final MediaCodec.BufferInfo bufferInfo) {
                 try {
-                    Log.d(TAG, "====zhongjihao====outputVideoFrame=====");
+                    Log.d(TAG, " outputVideoFrame=====");
                     muxerDatas.put(new MuxerData(
                             trackIndex, outBuf, bufferInfo));
                 } catch (InterruptedException e) {
-                    Log.e(TAG, "====zhongjihao====outputVideoFrame=====error: " + e.toString());
+                    Log.e(TAG, " outputVideoFrame=====error: " + e.toString());
                     e.printStackTrace();
                 }
             }
@@ -205,11 +205,11 @@ public class MSMediaMuxer {
             @Override
             public void outputAudioFrame(final int trackIndex,final ByteBuffer outBuf,final MediaCodec.BufferInfo bufferInfo) {
                 try {
-                    Log.d(TAG, "====zhongjihao====outputAudioFrame=====");
+                    Log.d(TAG, " outputAudioFrame=====");
                     muxerDatas.put(new MuxerData(
                             trackIndex, outBuf, bufferInfo));
                 } catch (InterruptedException e) {
-                    Log.e(TAG, "====zhongjihao====outputAudioFrame=====error: "+e.toString());
+                    Log.e(TAG, " outputAudioFrame=====error: "+e.toString());
                     e.printStackTrace();
                 }
             }
@@ -217,13 +217,13 @@ public class MSMediaMuxer {
             @Override
             public void outMediaFormat(final int trackIndex, MediaFormat mediaFormat) {
                 if (trackIndex == TRACK_AUDIO) {
-                    Log.d(TAG, "====zhongjihao===addAudioMediaFormat======mediaMuxer: " + (mediaMuxer != null));
+                    Log.d(TAG, " addAudioMediaFormat======mediaMuxer: " + (mediaMuxer != null));
                     if (mediaMuxer != null) {
                         audioTrackIndex = mediaMuxer.addTrack(mediaFormat);
                         isAudioAdd = true;
                     }
                 } else if (trackIndex == TRACK_VIDEO) {
-                    Log.d(TAG, "====zhongjihao===addVideoMediaFormat=======mediaMuxer: " + (mediaMuxer != null));
+                    Log.d(TAG, " addVideoMediaFormat=======mediaMuxer: " + (mediaMuxer != null));
                     if (mediaMuxer != null) {
                         videoTrackIndex = mediaMuxer.addTrack(mediaFormat);
                         isVideoAdd = true;

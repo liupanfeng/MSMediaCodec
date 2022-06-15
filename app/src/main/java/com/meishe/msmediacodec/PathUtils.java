@@ -10,7 +10,7 @@ import java.io.File;
  *
  * @Author : lpf
  * @CreateDate : 2022/6/13 上午10:41
- * @Description :
+ * @Description : 路径工具类
  * @Copyright :www.meishesdk.com Inc.All rights reserved.
  */
 public class PathUtils {
