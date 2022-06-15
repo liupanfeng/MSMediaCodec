@@ -1,10 +1,13 @@
-package com.meishe.msmediacodec;
+package com.meishe.msmediacodec.codec;
 
 
 import android.media.MediaCodec;
 import android.media.MediaFormat;
 import android.media.MediaMuxer;
 import android.util.Log;
+
+import com.meishe.msmediacodec.channel.MSAudioChannel;
+import com.meishe.msmediacodec.channel.MSVideoChannel;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.LinkedBlockingQueue;

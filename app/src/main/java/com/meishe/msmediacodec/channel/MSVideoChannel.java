@@ -1,4 +1,4 @@
-package com.meishe.msmediacodec;
+package com.meishe.msmediacodec.channel;
 
 import android.app.Activity;
 import android.graphics.ImageFormat;

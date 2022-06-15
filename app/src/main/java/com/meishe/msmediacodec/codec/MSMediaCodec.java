@@ -1,4 +1,4 @@
-package com.meishe.msmediacodec;
+package com.meishe.msmediacodec.codec;
 
 import android.media.AudioFormat;
 import android.media.MediaCodec;
@@ -6,6 +6,8 @@ import android.media.MediaCodecInfo;
 import android.media.MediaCodecList;
 import android.media.MediaFormat;
 import android.util.Log;
+
+import com.meishe.msmediacodec.helper.MSYuvHelper;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -470,22 +472,22 @@ public class MSMediaCodec {
         if (mColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar) {
             Log.d(TAG,"encodeVideoData mColorFormat---"+MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar);
             /*nv21格式转为nv12格式*/
-            MSYuvEngineHelper.getInstance().Nv21ToNv12(input, mYuvBuffer, mWidth, mHeight);
-            MSYuvEngineHelper.getInstance().Nv12ClockWiseRotate90(mYuvBuffer, mWidth, mHeight, mRotateYuvBuffer, mOutWidth, mOutHeight);
+            MSYuvHelper.getInstance().Nv21ToNv12(input, mYuvBuffer, mWidth, mHeight);
+            MSYuvHelper.getInstance().Nv12ClockWiseRotate90(mYuvBuffer, mWidth, mHeight, mRotateYuvBuffer, mOutWidth, mOutHeight);
         } else if (mColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar) {
             Log.d(TAG,"encodeVideoData mColorFormat---"+MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar);
             /*用于NV21格式转换为I420(YUV420P)格式*/
-            MSYuvEngineHelper.getInstance().Nv21ToI420(input, mYuvBuffer, mWidth, mHeight);
-            MSYuvEngineHelper.getInstance().I420ClockWiseRotate90(mYuvBuffer, mWidth, mHeight, mRotateYuvBuffer, mOutWidth, mOutHeight);
+            MSYuvHelper.getInstance().Nv21ToI420(input, mYuvBuffer, mWidth, mHeight);
+            MSYuvHelper.getInstance().I420ClockWiseRotate90(mYuvBuffer, mWidth, mHeight, mRotateYuvBuffer, mOutWidth, mOutHeight);
         } else if (mColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedSemiPlanar) {
             Log.d(TAG,"encodeVideoData mColorFormat-----------"+MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedSemiPlanar);
             System.arraycopy(input, 0, mYuvBuffer, 0, mWidth * mHeight * 3 / 2);
-            MSYuvEngineHelper.getInstance().Nv21ClockWiseRotate90(mYuvBuffer, mWidth, mHeight, mRotateYuvBuffer, mOutWidth, mOutHeight);
+            MSYuvHelper.getInstance().Nv21ClockWiseRotate90(mYuvBuffer, mWidth, mHeight, mRotateYuvBuffer, mOutWidth, mOutHeight);
         }else if (mColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedPlanar) {
             Log.d(TAG,"encodeVideoData mColorFormat----"+MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedPlanar);
             /*用于NV21格式转换为YV12格式*/
-            MSYuvEngineHelper.getInstance().Nv21ToYv12(input, mYuvBuffer, mWidth, mHeight);
-            MSYuvEngineHelper.getInstance().Yv12ClockWiseRotate90(mYuvBuffer, mWidth, mHeight, mRotateYuvBuffer, mOutWidth, mOutHeight);
+            MSYuvHelper.getInstance().Nv21ToYv12(input, mYuvBuffer, mWidth, mHeight);
+            MSYuvHelper.getInstance().Yv12ClockWiseRotate90(mYuvBuffer, mWidth, mHeight, mRotateYuvBuffer, mOutWidth, mOutHeight);
         }
 
         try {

@@ -1,7 +1,10 @@
-package com.meishe.msmediacodec;
+package com.meishe.msmediacodec.utils;
 
 import android.os.Environment;
 import android.util.Log;
+
+import com.meishe.msmediacodec.AndroidOS;
+import com.meishe.msmediacodec.App;
 
 import java.io.File;
 

@@ -1,4 +1,4 @@
-package com.meishe.msmediacodec;
+package com.meishe.msmediacodec.channel;
 
 import android.media.AudioFormat;
 import android.media.AudioRecord;

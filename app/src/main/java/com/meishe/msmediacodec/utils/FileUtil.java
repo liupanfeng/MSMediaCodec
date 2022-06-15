@@ -1,4 +1,4 @@
-package com.meishe.msmediacodec;
+package com.meishe.msmediacodec.utils;
 
 import android.content.Context;
 import android.content.pm.PackageInfo;

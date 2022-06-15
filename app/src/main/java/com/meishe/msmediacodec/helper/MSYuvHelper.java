@@ -1,4 +1,6 @@
-package com.meishe.msmediacodec;
+package com.meishe.msmediacodec.helper;
+
+import com.meishe.msmediacodec.MSYuvOperateJni;
 
 /**
  * * All rights reserved,Designed by www.meishesdk.com
@@ -8,22 +10,22 @@ package com.meishe.msmediacodec;
  * @Description : 引擎包装类
  * @Copyright :www.meishesdk.com Inc.All rights reserved.
  */
-public class MSYuvEngineHelper {
+public class MSYuvHelper {
 
     /**
      * c++ YuvEngine 对象的指针
      */
     private long mCPtr;
 
-    private MSYuvEngineHelper() {
+    private MSYuvHelper() {
         mCPtr = 0;
     }
 
     private static class Helper{
-        private static  MSYuvEngineHelper instance=new MSYuvEngineHelper();
+        private static MSYuvHelper instance=new MSYuvHelper();
     }
 
-    public static MSYuvEngineHelper getInstance(){
+    public static MSYuvHelper getInstance(){
         return Helper.instance;
     }
 

@@ -1,4 +1,4 @@
-package com.meishe.msmediacodec;
+package com.meishe.msmediacodec.activity;
 
 import android.os.Bundle;
 import android.util.Log;
@@ -16,6 +16,12 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.hjq.permissions.OnPermissionCallback;
 import com.hjq.permissions.Permission;
 import com.hjq.permissions.XXPermissions;
+import com.meishe.msmediacodec.codec.MSMediaMuxer;
+import com.meishe.msmediacodec.helper.MSYuvHelper;
+import com.meishe.msmediacodec.R;
+import com.meishe.msmediacodec.channel.MSVideoChannel;
+import com.meishe.msmediacodec.utils.FileUtil;
+import com.meishe.msmediacodec.utils.PathUtils;
 
 import java.util.List;
 
@@ -54,7 +60,7 @@ public class CaptureActivity extends AppCompatActivity implements View.OnClickLi
         initMuxer();
 
         requestPermission();
-        MSYuvEngineHelper.getInstance().startYuvEngine();
+        MSYuvHelper.getInstance().startYuvEngine();
     }
 
     private void initMuxer() {
@@ -161,7 +167,7 @@ public class CaptureActivity extends AppCompatActivity implements View.OnClickLi
         }
         mMsVideoChannel.doStopCamera();
         mMsVideoChannel = null;
-        MSYuvEngineHelper.getInstance().stopYuvEngine();
+        MSYuvHelper.getInstance().stopYuvEngine();
     }
 
     @Override
