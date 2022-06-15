@@ -12,10 +12,33 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import io.reactivex.Observable;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Consumer;
+import io.reactivex.schedulers.Schedulers;
+
 /*
  * 直播流的时间戳不论音频还是视频，在整体时间线上应当呈现递增趋势。如果时间戳计算方法是按照音视频分开计算，那么音频时戳和视频时戳可能并不是在一条时间线上，
  * 这就有可能出现音频时戳在某一个时间点比对应的视频时戳小， 在某一个时间点又跳变到比对应的视频时戳大，导致播放端无法对齐。
  * 目前采用的时间戳以发送视频SPS帧为基础，不区分音频流还是视频流，统一使用即将发送RTMP包的系统时间作为该包的时间戳。
+ *
+ * tbn is the time base in AVStream that has come from the container, I
+ * think. It is used for all AVStream time stamps.
+ * tbn 是来自容器的 AVStream 中的时基。它用于所有 AVStream 时间戳。
+
+* tbc is the time base in AVCodecContext for the codec used for a
+* particular stream. It is used for all AVCodecContext and related time
+* stamps.
+*
+* tbc 是 AVCodecContext 中用于特定流的编解码器的时间基准。
+* 它用于所有 AVCodecContext 和相关的时间戳。
+
+* tbr is guessed from the video stream and is the value users want to see
+* when they look for the video frame rate, except sometimes it is twice
+* what one would expect because of field rate versus frame rate.
+* tbr 是从视频流中猜测出来的，是用户在寻找视频帧速率时希望看到的值，
+* 但有时由于场速率与帧速率的关系，它是人们预期的两倍。
+*
  */
 public class MSMediaCodec {
     private static final String TAG = "MSMediaCodec";
@@ -44,30 +67,46 @@ public class MSMediaCodec {
      */
     private int mWidth;
     private int mHeight;
+    /**
+     * 视频编码器
+     */
     private MediaCodec mVideoMediaCodec;
+    /**
+     * 视频媒体格式
+     */
     private MediaFormat mVideoFormat;
     private int mColorFormat = 0;
     private MediaCodec.BufferInfo mVideoBufferInfo;
     private ArrayList<Integer> mSupportColorFormatList;
-    private Thread mVideoEncoderThread;
     private volatile boolean mVideoEncoderLoop = false;
     private volatile boolean mVideoEncoderEnd = false;
+    /*视频阻塞队列*/
     private LinkedBlockingQueue<byte[]> mVideoQueue;
 
+    /**
+     * 音频硬件编码类型
+     */
     private static final String AUDIO_MIME_TYPE = "audio/mp4a-latm";
+    /**
+     * 音频编码器
+     */
     private MediaCodec mAudioMediaCodec;
     private MediaCodec.BufferInfo mBufferInfo;
     private MediaCodecInfo mAudioCodecInfo;
     private MediaFormat mAudioFormat;
-    private Thread mAudioEncoderThread;
     private volatile boolean mAudioEncoderLoop = false;
     private volatile boolean mEncoderEnd = false;
+    /**
+     * 音频阻塞队列
+     */
     private LinkedBlockingQueue<byte[]> mAudioQueue;
 
 
     private long mPresentationTimeUs;
     private final int TIMEOUT_USEC = 10000;
     private Callback mCallback;
+    private Disposable mVideoSubscribe;
+    private Disposable mAudioSubscribe;
 
     public static MSMediaCodec getInstance() {
         return Helper.instance;
@@ -92,27 +131,42 @@ public class MSMediaCodec {
         void outMediaFormat(final int trackIndex,MediaFormat mediaFormat);
     }
 
-    public void initAudioEncoder(int sampleRate, int pcmFormat,int chanelCount){
+    /**
+     * 初始化音频编码器
+     * @param sampleRate 采样率
+     * @param pcmFormat  pcm数据位深 这里传的是 16
+     * @param channelCount 音频通道数量
+     */
+    public void initAudioEncoder(int sampleRate, int pcmFormat,int channelCount){
         if (mAudioMediaCodec != null) {
             return;
         }
         mBufferInfo = new MediaCodec.BufferInfo();
+        /*初始化阻塞队列*/
         mAudioQueue = new LinkedBlockingQueue<>();
+        /*根据类型选择一个音频编码器*/
         mAudioCodecInfo = selectCodec(AUDIO_MIME_TYPE);
         if (mAudioCodecInfo == null) {
             Log.e(TAG, "Unable to find an appropriate codec for=" + AUDIO_MIME_TYPE);
             return;
         }
-        Log.d(TAG, "selected codec=" + mAudioCodecInfo.getName());
-        mAudioFormat = MediaFormat.createAudioFormat(AUDIO_MIME_TYPE, sampleRate, chanelCount);
+        /*根据 编码器类型、采样率、音频通道数量 创建音频媒体格式*/
+        mAudioFormat = MediaFormat.createAudioFormat(AUDIO_MIME_TYPE, sampleRate, channelCount);
+        /*如果内容是 AAC 音频，则指定所需的配置文件*/
         mAudioFormat.setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC);
-        mAudioFormat.setInteger(MediaFormat.KEY_CHANNEL_MASK, AudioFormat.CHANNEL_IN_STEREO);//CHANNEL_IN_STEREO 立体声
-        int bitRate = sampleRate * pcmFormat * chanelCount;
+        /*CHANNEL_IN_STEREO 立体声 双通道*/
+        mAudioFormat.setInteger(MediaFormat.KEY_CHANNEL_MASK, AudioFormat.CHANNEL_IN_STEREO);
+        /*采样率*位深*音频通道*/
+        int bitRate = sampleRate * pcmFormat * channelCount;
+        /*设置比特率*/
         mAudioFormat.setInteger(MediaFormat.KEY_BIT_RATE, bitRate);
-        mAudioFormat.setInteger(MediaFormat.KEY_CHANNEL_COUNT, chanelCount);
+        /*设置通道数量*/
+        mAudioFormat.setInteger(MediaFormat.KEY_CHANNEL_COUNT, channelCount);
+        /*设置采样率*/
         mAudioFormat.setInteger(MediaFormat.KEY_SAMPLE_RATE, sampleRate);
-        Log.d(TAG, "mAudioFormat=" + mAudioFormat.toString());
 
+        Log.d(TAG, "mAudioFormat=" + mAudioFormat.toString());
+        Log.d(TAG, "selected codec=" + mAudioCodecInfo.getName());
         try {
             mAudioMediaCodec = MediaCodec.createEncoderByType(AUDIO_MIME_TYPE);
         } catch (IOException e) {
@@ -122,28 +176,35 @@ public class MSMediaCodec {
         Log.d(TAG, String.format("编码器:%s创建完成", mAudioMediaCodec.getName()));
     }
 
+    /**
+     * 初始化视频编码器
+     * @param width 宽
+     * @param height 高
+     * @param fps 帧率
+     */
     public void initVideoEncoder(int width, int height,int fps) {
         if (mVideoMediaCodec != null) {
             return;
         }
         this.mWidth = width;
         this.mHeight = height;
+        /*初始化 视频阻塞队列*/
         mVideoQueue = new LinkedBlockingQueue<>();
+        /*颜色格式列表*/
         mSupportColorFormatList = new ArrayList<>();
         mRotateYuvBuffer = new byte[this.mWidth * this.mHeight * 3 / 2];
         mYuvBuffer = new byte[this.mWidth * this.mHeight * 3 / 2];
         Log.d(TAG, "mWidth: "+mWidth+"  mHeight: "+mHeight);
+
         mVideoBufferInfo = new MediaCodec.BufferInfo();
         /*选择系统用于编码H264的编码器信息*/
-        MediaCodecInfo vCodecInfo = selectCodec(VIDEO_MIME_TYPE);
-        if (vCodecInfo == null) {
+        MediaCodecInfo codecInfo = selectCodec(VIDEO_MIME_TYPE);
+        if (codecInfo == null) {
             Log.e(TAG, "Unable to find an appropriate codec for " + VIDEO_MIME_TYPE);
             return;
         }
-
-        Log.d(TAG, "found video codec: " + vCodecInfo.getName());
         /*根据MIME格式,选择颜色格式*/
-        selectColorFormat(vCodecInfo, VIDEO_MIME_TYPE);
+        selectColorFormat(codecInfo, VIDEO_MIME_TYPE);
 
         for (int i = 0; i < mSupportColorFormatList.size(); i++) {
             if (isRecognizedFormat(mSupportColorFormatList.get(i))) {
@@ -153,7 +214,7 @@ public class MSMediaCodec {
         }
 
         if(mColorFormat == 0){
-            Log.e(TAG, "couldn't find a good color format for " + vCodecInfo.getName()
+            Log.e(TAG, "couldn't find a good color format for " + codecInfo.getName()
                             + " / " + VIDEO_MIME_TYPE);
             return;
         }
@@ -179,7 +240,7 @@ public class MSMediaCodec {
 
         try {
             /*创建一个MediaCodec*/
-            mVideoMediaCodec = MediaCodec.createByCodecName(vCodecInfo.getName());
+            mVideoMediaCodec = MediaCodec.createByCodecName(codecInfo.getName());
         } catch (IOException e) {
             e.printStackTrace();
             throw new RuntimeException("createByCodecName error=", e);
@@ -187,6 +248,11 @@ public class MSMediaCodec {
         Log.d(TAG, String.format("MediaCodec:%s创建完成", mVideoMediaCodec.getName()));
     }
 
+    /**
+     * 选择一个颜色格式
+     * @param codecInfo
+     * @param mimeType
+     */
     private void selectColorFormat(MediaCodecInfo codecInfo,
                                         String mimeType) {
         MediaCodecInfo.CodecCapabilities capabilities = codecInfo
@@ -199,6 +265,11 @@ public class MSMediaCodec {
         }
     }
 
+    /**
+     * 是否是认可的颜色格式
+     * @param colorFormat
+     * @return
+     */
     private boolean isRecognizedFormat(int colorFormat) {
         switch (colorFormat) {
             /*对应Camera预览格式I420(YV21/YUV420P)*/
@@ -216,6 +287,11 @@ public class MSMediaCodec {
         }
     }
 
+    /**
+     * 根据类型选择一个编码器
+     * @param mimeType
+     * @return
+     */
     private MediaCodecInfo selectCodec(String mimeType) {
         int numCodecs = MediaCodecList.getCodecCount();
         for (int i = 0; i < numCodecs; i++) {
@@ -234,7 +310,7 @@ public class MSMediaCodec {
     }
 
     /**
-     * 开始
+     * 开始编码
      */
     public void start() {
         startAudioEncode();
@@ -242,13 +318,16 @@ public class MSMediaCodec {
     }
 
     /**
-     * 停止
+     * 停止编码
      */
     public void stop() {
         stopAudioEncode();
         stopVideoEncode();
     }
 
+    /**
+     * 开始视频编码
+     */
     private void startVideoEncode(){
         if (mVideoMediaCodec == null) {
             throw new RuntimeException("pls init mVideoMediaCodec");
@@ -258,9 +337,9 @@ public class MSMediaCodec {
             throw new RuntimeException("mVideoEncoderLoop need stop first");
         }
 
-        mVideoEncoderThread = new Thread() {
+        mVideoSubscribe = Observable.just(1).observeOn(Schedulers.io()).subscribe(new Consumer<Integer>() {
             @Override
-            public void run() {
+            public void accept(Integer integer) throws Exception {
                 Log.d(TAG, "----video encode start---");
                 mPresentationTimeUs = System.currentTimeMillis() * 1000;
                 mVideoEncoderEnd = false;
@@ -288,18 +367,23 @@ public class MSMediaCodec {
                     mVideoMediaCodec = null;
                 }
                 mVideoQueue.clear();
-                Log.d(TAG, "Video 编码线程 退出...");
+                Log.d(TAG, "---Video encode thread end---");
             }
-        };
+        });
         mVideoEncoderLoop = true;
-        mVideoEncoderThread.start();
     }
 
+    /**
+     * 停止视频编码
+     */
     private void stopVideoEncode() {
-        Log.d(TAG, "stop video 编码...");
+        Log.d(TAG, "stop video encode...");
         mVideoEncoderEnd = true;
     }
 
+    /**
+     * 开始音频编码
+     */
     private void startAudioEncode() {
         if (mAudioMediaCodec == null) {
             throw new RuntimeException("pls init mAudioMediaCodec");
@@ -308,9 +392,9 @@ public class MSMediaCodec {
         if (mAudioEncoderLoop) {
             throw new RuntimeException("mAudioEncoderLoop need stop first");
         }
-        mAudioEncoderThread = new Thread() {
+        mAudioSubscribe = Observable.just(1).observeOn(Schedulers.io()).subscribe(new Consumer<Integer>() {
             @Override
-            public void run() {
+            public void accept(Integer integer) throws Exception {
                 Log.d(TAG, "------Audio encode start-----");
                 mPresentationTimeUs = System.currentTimeMillis() * 1000;
                 mEncoderEnd = false;
@@ -338,9 +422,8 @@ public class MSMediaCodec {
                 mAudioQueue.clear();
                 Log.d(TAG, "----Audio 编码线程退出----");
             }
-        };
+        });
         mAudioEncoderLoop = true;
-        mAudioEncoderThread.start();
     }
 
     private void stopAudioEncode() {
@@ -378,6 +461,10 @@ public class MSMediaCodec {
         }
     }
 
+    /**
+     * 进行视频编码
+     * @param input
+     */
     private void encodeVideoData(byte[] input) {
         /*input为Camera预览格式NV21数据*/
         if (mColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar) {
@@ -455,8 +542,6 @@ public class MSMediaCodec {
                 }
 
                 if ((mVideoBufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {
-                    // The codec config data was pulled out and fed to the muxer when we got
-                    // the INFO_OUTPUT_FORMAT_CHANGED status.  Ignore it.
                     Log.d(TAG, "Video ignoring BUFFER_FLAG_CODEC_CONFIG");
                     mVideoBufferInfo.size = 0;
                 }
@@ -474,7 +559,7 @@ public class MSMediaCodec {
                 if ((mVideoBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
                     Log.d(TAG, "Recv Video Encoder===BUFFER_FLAG_END_OF_STREAM=====" );
                     mVideoEncoderLoop = false;
-                    mVideoEncoderThread.interrupt();
+                    mVideoSubscribe.dispose();
                     return;
                 }
             }
@@ -483,6 +568,10 @@ public class MSMediaCodec {
         }
     }
 
+    /**
+     * 进行音频编码操作
+     * @param input
+     */
     private void encodeAudioData(byte[] input){
         try {
             /*拿到输入缓冲区,用于传送数据进行编码*/
@@ -512,24 +601,24 @@ public class MSMediaCodec {
 
             /*拿到输出缓冲区,用于取到编码后的数据*/
             ByteBuffer[] outputBuffers = mAudioMediaCodec.getOutputBuffers();
-            //拿到输出缓冲区的索引
+            /*拿到输出缓冲区的索引*/
             int outputBufferIndex = mAudioMediaCodec.dequeueOutputBuffer(mBufferInfo, TIMEOUT_USEC);
-            Log.d(TAG, "Audio======outputBufferIndex: "+outputBufferIndex);
+            Log.d(TAG, "Audio outputBufferIndex: "+outputBufferIndex);
             if (outputBufferIndex == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED){
                 outputBuffers = mAudioMediaCodec.getOutputBuffers();
             }else if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED){
-                Log.d(TAG, "Audio===INFO_OUTPUT_FORMAT_CHANGED===");
-                //加入音轨的时刻,一定要等编码器设置编码格式完成后，再将它加入到混合器中，
-                // 编码器编码格式设置完成的标志是dequeueOutputBuffer得到返回值为MediaCodec.INFO_OUTPUT_FORMAT_CHANGED
-                final MediaFormat newformat = mAudioMediaCodec.getOutputFormat(); // API >= 16
+                Log.d(TAG, "Audio INFO_OUTPUT_FORMAT_CHANGED ");
+                /*加入音轨的时刻,一定要等编码器设置编码格式完成后，再将它加入到混合器中，*/
+                /*编码器编码格式设置完成的标志是dequeueOutputBuffer得到返回值为MediaCodec.INFO_OUTPUT_FORMAT_CHANGED*/
+                final MediaFormat newformat = mAudioMediaCodec.getOutputFormat();
                 if (null != mCallback && !mEncoderEnd) {
                     Log.d(TAG,"添加音轨 INFO_OUTPUT_FORMAT_CHANGED " + newformat.toString());
                     mCallback.outMediaFormat(MSMediaMuxer.TRACK_AUDIO, newformat);
                 }
             }
             while (outputBufferIndex >= 0) {
-                //数据已经编码成AAC格式
-                //outputBuffer保存的就是AAC数据
+                /*数据已经编码成AAC格式*/
+                /*outputBuffer保存的就是AAC数据*/
                 ByteBuffer outputBuffer = outputBuffers[outputBufferIndex];
                 if (outputBuffer == null) {
                     throw new RuntimeException("encoderOutputBuffer " + outputBufferIndex +
@@ -537,35 +626,27 @@ public class MSMediaCodec {
                 }
 
                 if ((mBufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {
-                    // You shoud set output format to muxer here when you target Android4.3 or less
-                    // but MediaCodec#getOutputFormat can not call here(because INFO_OUTPUT_FORMAT_CHANGED don't come yet)
-                    // therefor we should expand and prepare output format from buffer data.
-                    // This sample is for API>=18(>=Android 4.3), just ignore this flag here
-                    Log.d(TAG, "Audio====drain:BUFFER_FLAG_CODEC_CONFIG===");
                     mBufferInfo.size = 0;
                 }
-
                 if (mBufferInfo.size != 0) {
-                    // byte[] outData = new byte[mBufferInfo.size];
-                    // outputBuffer.get(outData);
                     if (null != mCallback && !mEncoderEnd) {
                         mCallback.outputAudioFrame(MSMediaMuxer.TRACK_AUDIO,outputBuffer, mBufferInfo);
                     }
                 }
-                //释放资源
+                /*释放资源*/
                 mAudioMediaCodec.releaseOutputBuffer(outputBufferIndex, false);
-                //拿到输出缓冲区的索引
+                /*拿到输出缓冲区的索引*/
                 outputBufferIndex = mAudioMediaCodec.dequeueOutputBuffer(mBufferInfo, 0);
-                //编码结束的标志
+                /*编码结束的标志*/
                 if ((mBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                    Log.e(TAG, "Recv Audio Encoder===BUFFER_FLAG_END_OF_STREAM=====");
+                    Log.e(TAG, "Recv Audio Encoder BUFFER_FLAG_END_OF_STREAM ");
                     mAudioEncoderLoop = false;
-                    mAudioEncoderThread.interrupt();
+                    mAudioSubscribe.dispose();
                     return;
                 }
             }
         } catch (Exception t) {
-            Log.e(TAG, "encodeAudioData=====error: " + t.toString());
+            Log.e(TAG, "encodeAudioData error: " + t.toString());
         }
     }
 }

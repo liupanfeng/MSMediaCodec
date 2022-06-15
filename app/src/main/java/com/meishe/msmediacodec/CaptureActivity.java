@@ -60,7 +60,7 @@ public class CaptureActivity extends AppCompatActivity implements View.OnClickLi
     private void initMuxer() {
         String dirPath = PathUtils.getRecordDir();
         String filePath = dirPath + FileUtil.getMp4FileName(System.currentTimeMillis());
-        mMediaMuxer = MSMediaMuxer.newInstance();
+        mMediaMuxer = MSMediaMuxer.getInstance();
         mMediaMuxer.initMediaMuxer(filePath);
         Log.d(TAG, "initMediaMuxer filePath:" + filePath);
     }
