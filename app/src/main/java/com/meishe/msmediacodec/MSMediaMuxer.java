@@ -102,7 +102,7 @@ public class MSMediaMuxer {
      * 初始化音频编码器
      */
     public void initAudioEncoder(){
-        mAVEncoder.initAudioEncoder(mAudioGather.getaSampleRate(),mAudioGather.getPcmForamt(),mAudioGather.getaChannelCount());
+        mAVEncoder.initAudioEncoder(mAudioGather.getSampleRate(),mAudioGather.getPcmFormat(),mAudioGather.getChannelCount());
     }
 
     /**
@@ -181,7 +181,7 @@ public class MSMediaMuxer {
             }
         });
 
-        mAudioGather.setCallback(new MSAudioChannel.Callback() {
+        mAudioGather.setCallback(new MSAudioChannel.OnAudioDataCallback() {
             @Override
             public void audioData(byte[] data) {
                 if (mAVEncoder != null)

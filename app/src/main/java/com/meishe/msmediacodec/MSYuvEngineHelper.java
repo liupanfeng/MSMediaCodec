@@ -10,37 +10,38 @@ package com.meishe.msmediacodec;
  */
 public class MSYuvEngineHelper {
 
-    private long cPtr;
-    private static MSYuvEngineHelper mInstance;
-    private static Object lockobj = new Object();
+    /**
+     * c++ YuvEngine 对象的指针
+     */
+    private long mCPtr;
 
     private MSYuvEngineHelper() {
-        cPtr = 0;
+        mCPtr = 0;
     }
 
-    public static MSYuvEngineHelper newInstance() {
-        synchronized (lockobj) {
-            if (mInstance == null) {
-                mInstance = new MSYuvEngineHelper();
-            }
-        }
-        return mInstance;
+    private static class Helper{
+        private static  MSYuvEngineHelper instance=new MSYuvEngineHelper();
     }
 
-    //启动yuv引擎
+    public static MSYuvEngineHelper getInstance(){
+        return Helper.instance;
+    }
+
+    /**
+     * 拿到yuv引擎 方法句柄
+     */
     public void startYuvEngine() {
-        cPtr = MSYuvOperateJni.startYuvEngine();
+        mCPtr = MSYuvOperateJni.startYuvEngine();
     }
 
     /**
      * NV21 -> NV12
      */
     public void Nv21ToNv12(byte[] pNv21,byte[] pNv12,int width,int height){
-        if (cPtr != 0) {
-            MSYuvOperateJni.Nv21ToNv12(cPtr,pNv21,pNv12, width, height);
+        if (mCPtr != 0) {
+            MSYuvOperateJni.Nv21ToNv12(mCPtr,pNv21,pNv12, width, height);
         }
     }
-
 
     /**
      * Nv12顺时针旋转90度
@@ -52,12 +53,10 @@ public class MSYuvEngineHelper {
      * outHeight 旋转后对应的高
      */
     public void Nv12ClockWiseRotate90(byte[] pNv12,int srcWidth,int srcHeight,byte[] outData,int[] outWidth,int[] outHeight){
-        if (cPtr != 0) {
-            MSYuvOperateJni.Nv12ClockWiseRotate90(cPtr, pNv12, srcWidth, srcHeight,outData,outWidth,outHeight);
+        if (mCPtr != 0) {
+            MSYuvOperateJni.Nv12ClockWiseRotate90(mCPtr, pNv12, srcWidth, srcHeight,outData,outWidth,outHeight);
         }
     }
-
-
 
     /**
      * YV12顺时针旋转90度
@@ -69,18 +68,17 @@ public class MSYuvEngineHelper {
      * outHeight 旋转后对应的高
      */
     public void Yv12ClockWiseRotate90(byte[] pYv12, int srcWidth,int srcHeight,byte[] outData, int[] outWidth,int[] outHeight){
-        if (cPtr != 0) {
-            MSYuvOperateJni.Yv12ClockWiseRotate90(cPtr, pYv12, srcWidth, srcHeight,outData,outWidth,outHeight);
+        if (mCPtr != 0) {
+            MSYuvOperateJni.Yv12ClockWiseRotate90(mCPtr, pYv12, srcWidth, srcHeight,outData,outWidth,outHeight);
         }
     }
-
 
     /**
      * NV21 -> I420
      */
     public void Nv21ToI420(byte[] pNv21,byte[] pI420,int width,int height) {
-        if (cPtr != 0) {
-            MSYuvOperateJni.Nv21ToI420(cPtr, pNv21,pI420, width,height);
+        if (mCPtr != 0) {
+            MSYuvOperateJni.Nv21ToI420(mCPtr, pNv21,pI420, width,height);
         }
     }
 
@@ -88,8 +86,8 @@ public class MSYuvEngineHelper {
      * NV21 -> YV12
      */
     public void Nv21ToYv12(byte[] pNv21,byte[] pYv12,int width,int height) {
-        if (cPtr != 0) {
-            MSYuvOperateJni.Nv21ToYV12(cPtr, pNv21,pYv12, width,height);
+        if (mCPtr != 0) {
+            MSYuvOperateJni.Nv21ToYV12(mCPtr, pNv21,pYv12, width,height);
         }
     }
 
@@ -103,8 +101,8 @@ public class MSYuvEngineHelper {
      * outHeight 旋转后对应的高
      */
     public void Nv21ClockWiseRotate90(byte[] pNv21,int srcWidth,int srcHeight,byte[] outData,int[] outWidth,int[] outHeight){
-        if (cPtr != 0) {
-            MSYuvOperateJni.Nv21ClockWiseRotate90(cPtr, pNv21, srcWidth, srcHeight,outData,outWidth,outHeight);
+        if (mCPtr != 0) {
+            MSYuvOperateJni.Nv21ClockWiseRotate90(mCPtr, pNv21, srcWidth, srcHeight,outData,outWidth,outHeight);
         }
     }
 
@@ -120,17 +118,19 @@ public class MSYuvEngineHelper {
      * outHeight 旋转后对应的高
      */
     public void I420ClockWiseRotate90(byte[] pI420, int srcWidth,int srcHeight,byte[] outData, int[] outWidth,int[] outHeight){
-        if (cPtr != 0) {
-            MSYuvOperateJni.I420ClockWiseRotate90(cPtr, pI420, srcWidth, srcHeight,outData,outWidth,outHeight);
+        if (mCPtr != 0) {
+            MSYuvOperateJni.I420ClockWiseRotate90(mCPtr, pI420, srcWidth, srcHeight,outData,outWidth,outHeight);
         }
     }
 
-    //停止yuv引擎
+    /**
+     * 停止yuv引擎
+     */
     public void stopYuvEngine() {
-        if (cPtr != 0) {
-            MSYuvOperateJni.stopYuvEngine(cPtr);
+        if (mCPtr != 0) {
+            MSYuvOperateJni.stopYuvEngine(mCPtr);
         }
-        mInstance = null;
+        Helper.instance = null;
     }
 
 

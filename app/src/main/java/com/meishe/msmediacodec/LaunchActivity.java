@@ -47,6 +47,6 @@ public class LaunchActivity extends AppCompatActivity {
     }
 
     public void onStartRecord(View view) {
-        startActivity(new Intent(this,MainActivity.class));
+        startActivity(new Intent(this, CaptureActivity.class));
     }
 }
