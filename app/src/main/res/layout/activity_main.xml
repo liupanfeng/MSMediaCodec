@@ -1,21 +1,82 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    tools:context=".activity.CaptureActivity">
 
     <SurfaceView
-        android:id="@+id/surface_view"
+        android:id="@+id/surfaceview"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"/>
 
-    <Button
-        android:id="@+id/btn_start"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="right|bottom"
-        android:text="开始"
-        />
 
-</FrameLayout>
+    <FrameLayout
+        android:id="@+id/fl_take_photos"
+        android:layout_width="65dp"
+        android:layout_height="65dp"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="40dp">
+
+        <ImageView
+            android:id="@+id/iv_take_photo"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="@null"
+            android:src="@mipmap/capture_take_photo" />
+
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/fl_middle_parent"
+        android:layout_width="match_parent"
+        android:layout_height="35dp"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="140dp">
+
+        <ImageView
+            android:id="@+id/iv_back_delete"
+            android:layout_width="35dp"
+            android:layout_height="35dp"
+            android:layout_marginLeft="78dp"
+            android:contentDescription="@null"
+            android:visibility="invisible"
+            android:src="@mipmap/capture_back_delete"
+            />
+
+        <View
+            android:id="@+id/v_timing_dot"
+            android:layout_width="5dp"
+            android:layout_height="5dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginLeft="155dp"
+            android:background="#4a90e2"
+
+            android:visibility="invisible" />
+
+        <TextView
+            android:id="@+id/tv_timing_num"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:visibility="invisible"
+            tools:ignore="RelativeOverlap" />
+
+        <ImageView
+            android:id="@+id/iv_confirm"
+            android:layout_width="27dp"
+            android:layout_height="27dp"
+            android:layout_gravity="center_vertical|right"
+            android:layout_marginRight="85dp"
+            android:contentDescription="@null"
+            android:visibility="invisible"
+            android:src="@mipmap/capture_confirm"
+            />
+    </FrameLayout>
+
+
+</RelativeLayout>

@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">MSMediaCodec</string>
+    <string name="zeroZZZ">00:00</string>
 </resources>

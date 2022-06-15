@@ -17,10 +17,13 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MSMediaCodec">
-        <activity android:name=".activity.LaunchActivity">
-
-        </activity>
-        <activity android:name=".activity.CaptureActivity">
+        <activity android:name=".activity.MSPlayerActivity"
+            android:label="播放页面"
+            ></activity>
+        <activity android:name=".activity.LaunchActivity"></activity>
+        <activity android:name=".activity.CaptureActivity"
+            android:label="录制页面"
+            >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

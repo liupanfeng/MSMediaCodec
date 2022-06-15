@@ -1,6 +1,8 @@
 package com.meishe.msmediacodec.activity;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.SurfaceHolder;
@@ -17,13 +19,20 @@ import com.hjq.permissions.OnPermissionCallback;
 import com.hjq.permissions.Permission;
 import com.hjq.permissions.XXPermissions;
 import com.meishe.msmediacodec.codec.MSMediaMuxer;
+import com.meishe.msmediacodec.databinding.ActivityMainBinding;
 import com.meishe.msmediacodec.helper.MSYuvHelper;
 import com.meishe.msmediacodec.R;
 import com.meishe.msmediacodec.channel.MSVideoChannel;
+import com.meishe.msmediacodec.utils.Constants;
 import com.meishe.msmediacodec.utils.FileUtil;
 import com.meishe.msmediacodec.utils.PathUtils;
+import com.meishe.msmediacodec.utils.TimerUtils;
 
+import java.io.File;
 import java.util.List;
+
+import io.reactivex.Observable;
+import io.reactivex.disposables.Disposable;
 
 
 /**
@@ -34,54 +43,79 @@ public class CaptureActivity extends AppCompatActivity implements View.OnClickLi
     static {
         System.loadLibrary("native-lib");
     }
-
     private final static String TAG = "MainActivity";
-    private Button mBtnStart;
+
+    private ActivityMainBinding mBinding;
+
     private SurfaceView mSurfaceView;
     private SurfaceHolder mSurfaceHolder;
     private boolean mIsStarted;
     private MSMediaMuxer mMediaMuxer;
     private boolean mHasPermission;
     private MSVideoChannel mMsVideoChannel;
+    private String mFilePath;
+    private Disposable mDisposable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // 设置全屏
+        /*设置全屏*/
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        setContentView(R.layout.activity_main);
+        mBinding=ActivityMainBinding.inflate(getLayoutInflater());
+        setContentView(mBinding.getRoot());
 
         mMsVideoChannel = MSVideoChannel.getInstance();
 
         initView();
-
         initMuxer();
-
         requestPermission();
         MSYuvHelper.getInstance().startYuvEngine();
+        initListener();
+    }
+
+    private void initListener() {
+        mBinding.ivBackDelete.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (!TextUtils.isEmpty(mFilePath)){
+                    File file=new File(mFilePath);
+                    PathUtils.deleteFile(file.getAbsolutePath());
+                    mBinding.flMiddleParent.setVisibility(View.GONE);
+                }
+            }
+        });
+
+        mBinding.ivConfirm.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent=new Intent(CaptureActivity.this,MSPlayerActivity.class);
+                intent.putExtra(Constants.INTENT_KEY_VIDEO_PATH, mFilePath);
+                startActivity(intent);
+                finish();
+            }
+        });
     }
 
     private void initMuxer() {
         String dirPath = PathUtils.getRecordDir();
-        String filePath = dirPath + FileUtil.getMp4FileName(System.currentTimeMillis());
+        mFilePath = dirPath + FileUtil.getMp4FileName(System.currentTimeMillis());
         mMediaMuxer = MSMediaMuxer.getInstance();
-        mMediaMuxer.initMediaMuxer(filePath);
-        Log.d(TAG, "initMediaMuxer filePath:" + filePath);
+        mMediaMuxer.initMediaMuxer(mFilePath);
+        Log.d(TAG, "initMediaMuxer mFilePath:" + mFilePath);
     }
 
     private void initView() {
         mIsStarted = false;
         mHasPermission = false;
-        mBtnStart = findViewById(R.id.btn_start);
-        mSurfaceView = findViewById(R.id.surface_view);
+        mSurfaceView = findViewById(R.id.surfaceview);
         mSurfaceView.setKeepScreenOn(true);
         mSurfaceHolder = mSurfaceView.getHolder();
         /*设置surface不需要自己的维护缓存区*/
         mSurfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
         mSurfaceHolder.addCallback(new MSSurfaceCallback());
-        mBtnStart.setOnClickListener(this);
+        mBinding.flTakePhotos.setOnClickListener(this);
     }
 
     /**
@@ -96,10 +130,9 @@ public class CaptureActivity extends AppCompatActivity implements View.OnClickLi
                     @Override
                     public void onGranted(List<String> permissions, boolean all) {
                         if (all) {
-                            mBtnStart.post(new Runnable() {
+                            mBinding.flTakePhotos.post(new Runnable() {
                                 @Override
                                 public void run() {
-                                    mBtnStart.setEnabled(true);
                                     mHasPermission = true;
                                     // 打开摄像头
                                     mMsVideoChannel.openCamera(CaptureActivity.this,mSurfaceHolder);
@@ -107,14 +140,12 @@ public class CaptureActivity extends AppCompatActivity implements View.OnClickLi
                             });
 
                         } else {
-                            mBtnStart.setEnabled(false);
                             mHasPermission = false;
                         }
                     }
 
                     @Override
                     public void onDenied(List<String> permissions, boolean never) {
-                        mBtnStart.setEnabled(false);
                         mHasPermission = false;
                     }
                 });
@@ -123,6 +154,9 @@ public class CaptureActivity extends AppCompatActivity implements View.OnClickLi
 
     private void codecToggle() {
         if (mIsStarted) {
+            mBinding.ivTakePhoto.setBackgroundResource(R.mipmap.capture_take_photo);
+            mBinding.ivBackDelete.setVisibility(View.VISIBLE);
+            mBinding.ivConfirm.setVisibility(View.VISIBLE);
             mIsStarted = false;
             //停止编码 先要停止编码，然后停止采集
             mMediaMuxer.stopEncoder();
@@ -131,7 +165,13 @@ public class CaptureActivity extends AppCompatActivity implements View.OnClickLi
             //释放编码器
             mMediaMuxer.release();
             mMediaMuxer = null;
+            if (mDisposable!=null){
+                mDisposable.dispose();
+            }
         } else {
+            mBinding.ivTakePhoto.setBackgroundResource(R.mipmap.capture_stop_video);
+            mBinding.tvTimingNum.setVisibility(View.VISIBLE);
+
             mIsStarted = true;
             if (mMediaMuxer == null) {
                 initMuxer();
@@ -146,8 +186,21 @@ public class CaptureActivity extends AppCompatActivity implements View.OnClickLi
                     mMsVideoChannel.getHeight(), mMsVideoChannel.getFrameRate());
             //启动编码
             mMediaMuxer.startEncoder();
+
+            mDisposable = TimerUtils.startTimer(1000, new TimerUtils.TimerListener() {
+                @Override
+                public void onLoading(int next) {
+                    Log.d(TAG, "onLoading: next ======[" + next + "]");
+                    mBinding.tvTimingNum.setText("00:"+TimerUtils.getSeconds(1000-next));
+                }
+
+                @Override
+                public void onComplete() {
+                    Log.d(TAG, "onComplete: 计时结束");
+                }
+            });
+
         }
-        mBtnStart.setText(mIsStarted ? "停止" : "开始");
     }
 
     @Override
@@ -184,7 +237,7 @@ public class CaptureActivity extends AppCompatActivity implements View.OnClickLi
     public void onClick(View v) {
         int id = v.getId();
         switch (id) {
-            case R.id.btn_start:
+            case R.id.fl_take_photos:
                 codecToggle();
                 break;
         }
