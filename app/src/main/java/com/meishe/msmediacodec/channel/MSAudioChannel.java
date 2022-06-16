@@ -110,11 +110,12 @@ public class MSAudioChannel {
                     mAudioRecord.startRecording();
                 }
                 while (isRecording && !Thread.interrupted()) {
-                    /*读取音频数据到buf*/
+                    /*读取音频数据到buf  audioRecord 将数据读到buffer中去*/
                     int size = mAudioRecord.read(mAudioBuf, 0, mAudioBuf.length);
                     if (size > 0) {
                         Log.d(TAG, "录音字节数:" + size);
                         if (mCallback != null) {
+                            /*将数据添加到编码器的音频队列中去*/
                             mCallback.audioData(mAudioBuf);
                         }
                     }

@@ -82,8 +82,10 @@ public class MSMediaCodec {
     private ArrayList<Integer> mSupportColorFormatList;
     private volatile boolean mVideoEncoderLoop = false;
     private volatile boolean mVideoEncoderEnd = false;
-    /*视频阻塞队列*/
-    private LinkedBlockingQueue<byte[]> mVideoQueue;
+    /**
+     * 视频阻塞队列
+     */
+    private LinkedBlockingQueue<byte[]> mVideoLinkedBlockQueue;
 
     /**
      * 音频硬件编码类型
@@ -101,7 +103,7 @@ public class MSMediaCodec {
     /**
      * 音频阻塞队列
      */
-    private LinkedBlockingQueue<byte[]> mAudioQueue;
+    private LinkedBlockingQueue<byte[]> mAudioLinkedBlockQueue;
 
 
     private long mPresentationTimeUs;
@@ -145,7 +147,7 @@ public class MSMediaCodec {
         }
         mBufferInfo = new MediaCodec.BufferInfo();
         /*初始化阻塞队列*/
-        mAudioQueue = new LinkedBlockingQueue<>();
+        mAudioLinkedBlockQueue = new LinkedBlockingQueue<>();
         /*根据类型选择一个音频编码器*/
         mAudioCodecInfo = selectCodec(AUDIO_MIME_TYPE);
         if (mAudioCodecInfo == null) {
@@ -191,7 +193,7 @@ public class MSMediaCodec {
         this.mWidth = width;
         this.mHeight = height;
         /*初始化 视频阻塞队列*/
-        mVideoQueue = new LinkedBlockingQueue<>();
+        mVideoLinkedBlockQueue = new LinkedBlockingQueue<>();
         /*颜色格式列表*/
         mSupportColorFormatList = new ArrayList<>();
         mRotateYuvBuffer = new byte[this.mWidth * this.mHeight * 3 / 2];
@@ -351,7 +353,7 @@ public class MSMediaCodec {
                 while (mVideoEncoderLoop && !Thread.interrupted()) {
                     try {
                         /*待编码的数据*/
-                        byte[] data = mVideoQueue.take(); //
+                        byte[] data = mVideoLinkedBlockQueue.take(); //
                         Log.d(TAG, "要编码的Video数据大小:" + data.length);
                         encodeVideoData(data);
                     } catch (InterruptedException e) {
@@ -368,7 +370,7 @@ public class MSMediaCodec {
                     mVideoMediaCodec.release();
                     mVideoMediaCodec = null;
                 }
-                mVideoQueue.clear();
+                mVideoLinkedBlockQueue.clear();
                 Log.d(TAG, "---Video encode thread end---");
             }
         });
@@ -405,7 +407,7 @@ public class MSMediaCodec {
                 mAudioMediaCodec.start();
                 while (mAudioEncoderLoop && !Thread.interrupted()) {
                     try {
-                        byte[] data = mAudioQueue.take();
+                        byte[] data = mAudioLinkedBlockQueue.take();
                         Log.d(TAG, "要编码的Audio数据大小:" + data.length);
                         encodeAudioData(data);
                     } catch (InterruptedException e) {
@@ -421,7 +423,7 @@ public class MSMediaCodec {
                     mAudioMediaCodec.release();
                     mAudioMediaCodec = null;
                 }
-                mAudioQueue.clear();
+                mAudioLinkedBlockQueue.clear();
                 Log.d(TAG, "----Audio 编码线程退出----");
             }
         });
@@ -440,8 +442,8 @@ public class MSMediaCodec {
      */
     public void putVideoData(byte[] data) {
         try {
-            if(mVideoQueue != null){
-                mVideoQueue.put(data);
+            if(mVideoLinkedBlockQueue != null){
+                mVideoLinkedBlockQueue.put(data);
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -455,8 +457,8 @@ public class MSMediaCodec {
      */
     public void putAudioData(byte[] data) {
         try {
-            if(mAudioQueue != null){
-                mAudioQueue.put(data);
+            if(mAudioLinkedBlockQueue != null){
+                mAudioLinkedBlockQueue.put(data);
             }
         } catch (InterruptedException e) {
             e.printStackTrace();

@@ -269,6 +269,7 @@ public class MSVideoChannel {
             /*丢给VideoRunnable线程,使用MediaCodec进行h264编码操作*/
             if(data != null){
                 if(mCallback != null){
+                    /*将视频YUV NV21的数据 添加到编码器的链表阻塞队列中去 等待进行编码*/
                     mCallback.videoData(data);
                 }
                 camera.addCallbackBuffer(data);

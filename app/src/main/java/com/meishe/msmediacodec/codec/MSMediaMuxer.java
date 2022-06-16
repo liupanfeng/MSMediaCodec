@@ -83,6 +83,7 @@ public class MSMediaMuxer {
         }
         try {
             Log.d(TAG, " init MediaMuxer start");
+            /*初始化的时候将文件路径传递给MediaMuxer的，混合的数据就会写入到这个文件中去*/
             mMediaMuxer = new MediaMuxer(outfile, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
             Log.d(TAG, " init MediaMuxer end");
         }catch (Exception e){
@@ -100,6 +101,7 @@ public class MSMediaMuxer {
                 synchronized (lock) {
                     try {
                         Log.d(TAG, "媒体混合器等待开启");
+                        /*未开启的时候阻塞等待在这里*/
                         lock.wait();
                     } catch (InterruptedException e) {
                         e.printStackTrace();
@@ -115,7 +117,13 @@ public class MSMediaMuxer {
                             track = mAudioTrackIndex;
                         }
                         Log.d(TAG, " track: "+track+"    写入混合数据大小 " + data.bufferInfo.size);
-                        //添加数据
+                        /*
+                        * 将编码样本写入复用器。 <p>应用程序需要确保将样本写入正确的轨道。
+                         * 此外，它需要确保每个轨道的样本按时间顺序写入（例如，按照编码器提供的顺序。）<p>
+                        * 1.轨道信息
+                        * 2.编码之后的样本数据
+                        * 3. 与此样本相关的缓冲区信息
+                        * */
                         mMediaMuxer.writeSampleData(track, data.byteBuf, data.bufferInfo);
                     } catch (InterruptedException e) {
                         Log.e(TAG, " 写入混合数据失败!" + e.toString());
