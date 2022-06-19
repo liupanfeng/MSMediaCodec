@@ -71,12 +71,12 @@ AudioChannel::~AudioChannel() {
 void AudioChannel::stop() {
 
 
-    // 等  解码线程  播放线程  全部停止，你再安心的做释放工作
+    /* 等解码线程 播放线程全部停止，再做释放工作*/
     pthread_join(pid_audio_decode, nullptr);
     pthread_join(pid_audio_play, nullptr);
 
-    // 保证两个线程执行完毕，我再释放  稳稳的释放
 
+    /*保证两个线程执行完毕，再释放*/
     isPlaying = false;
     packets.setWork(0);
     frames.setWork(0);
@@ -177,33 +177,38 @@ void AudioChannel::audio_decode() {
         // 最新的FFmpeg，和旧版本差别很大， 新版本：1.发送pkt（压缩包）给缓冲区，  2.从缓冲区拿出来（原始包）
         ret = avcodec_send_packet(codecContext, pkt);
 
-        // FFmpeg源码缓存一份pkt，大胆释放即可
+        /*FFmpeg源码缓存一份pkt，可以释放*/
 //        releaseAVPacket(&pkt);
 
         if (ret) {
             break; // avcodec_send_packet 出现了错误，结束循环
         }
 
-        // 下面是从 FFmpeg缓冲区 获取 原始包
-        AVFrame *frame = av_frame_alloc(); // AVFrame： 解码后的视频原始数据包
+        /*下面是从FFmpeg缓冲区 获取 原始包
+         * AVFrame： 解码后的视频原始数据包
+         * */
+        AVFrame *frame = av_frame_alloc();
         ret = avcodec_receive_frame(codecContext, frame);
-        // 音频也有帧的概念，所以获取原始包的时候，最好还是判断下【严谨性，最好是判断下】
+        /*音频也有帧的概念，所以获取原始包的时候，最好还是判断下*/
         if (ret == AVERROR(EAGAIN)) {
-            continue; // 有可能音频帧，也会获取失败，重新拿一次
+            /*有可能音频帧，也会获取失败，重新拿一次*/
+            continue;
         } else if (ret != 0) {
             if (frame){
                 releaseAVFrame(&frame);
             }
             break; // 错误了
         }
-        // 重要拿到了 原始包-- PCM数据
+        /*拿到了原始包-- PCM数据*/
         frames.insertToQueue(frame);
         av_packet_unref(pkt);
         releaseAVPacket(&pkt);
     } // while end
 //    releaseAVPacket(&pkt);
-    av_packet_unref(pkt);   //释放结构体内部成员在堆区分配的内存
-    releaseAVPacket(&pkt);   //释放AVPacket *
+    /* 释放结构体内部成员在堆区分配的内存*/
+    av_packet_unref(pkt);
+    /*释放AVPacket **/
+    releaseAVPacket(&pkt);
 }
 
 
@@ -233,33 +238,40 @@ void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bq, void * args) {
 int AudioChannel::getPCM() {
     int pcm_data_size = 0;
 
-    // 获取PCM数据
-    // PCM数据在哪里？答：队列 frames队列中  frame->data == PCM数据(待 重采样   32bit)
-
+    /*
+     * 获取PCM数据
+     * PCM数据在哪里:队列frames队列中  frame->data == PCM数据(待重采样   32bit)
+     * */
     AVFrame *frame = 0;
     while (isPlaying) {
         int ret = frames.getQueueAndDel(frame);
         if (!isPlaying) {
-            break; // 如果关闭了播放，跳出循环，releaseAVPacket(&pkt);
+            /*如果关闭了播放，跳出循环，releaseAVPacket(&pkt);*/
         }
-        if (!ret) { // ret == 0
-            continue; // 哪怕是没有成功，也要继续（假设：你生产太慢(原始包加入队列)，我消费就等一下你）
+        if (!ret) {
+            /*哪怕是没有成功，也要继续（可能是由于生产太慢(原始包加入队列)）*/
+            continue;
         }
 
-        // 开始重采样
 
-        // 来源：10个48000   ---->  目标:44100  11个44100
-        // 获取单通道的样本数 (计算目标样本数： ？ 10个48000 --->  48000/44100因为除不尽  11个44100)
+        /*
+         * 开始重采样
+         * 来源：10个48000   ---->  目标:44100  11个44100
+         * 获取单通道的样本数 (计算目标样本数：  10个48000 --->  48000/44100因为除不尽  11个44100)
+         * */
         int dst_nb_samples = av_rescale_rnd(swr_get_delay(swr_ctx, frame->sample_rate) + frame->nb_samples, // 获取下一个输入样本相对于下一个输出样本将经历的延迟
                                             out_sample_rate, // 输出采样率
                                             frame->sample_rate, // 输入采样率
                                             AV_ROUND_UP); // 先上取 取去11个才能容纳的上
 
-        // pcm的处理逻辑
-        // 音频播放器的数据格式是我们自己在下面定义的
-        // 而原始数据（待播放的音频pcm数据）
-        // 重采样工作
-        // 返回的结果：每个通道输出的样本数(注意：是转换后的)    做一个简单的重采样实验(通道基本上都是:1024)
+        /*
+         * pcm的处理逻辑
+         * 音频播放器的数据格式是在下面定义的
+         * 而原始数据（待播放的音频pcm数据）
+         * 重采样工作
+         * 返回的结果：每个通道输出的样本数(注意：是转换后的)    做一个简单的重采样实验(通道基本上都是:1024)
+         *
+         * */
         int samples_per_channel = swr_convert(swr_ctx,
                 // 下面是输出区域
                                               &out_buffers,  // 【成果的buff】  重采样后的
@@ -269,14 +281,15 @@ int AudioChannel::getPCM() {
                                               (const uint8_t **) frame->data, // 队列的AVFrame * 那的  PCM数据 未重采样的
                                               frame->nb_samples); // 输入的样本数
 
-        // 由于out_buffers 和 dst_nb_samples 无法对应，所以需要重新计算
+        /*由于out_buffers 和 dst_nb_samples 无法对应，所以需要重新计算*/
         pcm_data_size = samples_per_channel * out_sample_size * out_channels; // 941通道样本数  *  2样本格式字节数  *  2声道数  =3764
-        // 单通道样本数:1024  * 2声道  * 2(16bit)  =  4,096
 
-        // 音视频同步
-        // 时间基TimeBase理解：例如：（fps25 一秒钟25帧， 那么每一帧==25分之1，而25分之1就是时间基概念）
 
-        // frame->best_effort_timestamp // 时间有单位：微妙 毫秒 秒 等，但是在FFmpeg里面有自己的单位（时间基TimeBase）
+        /*
+         * 单通道样本数:1024  * 2声道  * 2(16bit)  =  4,096
+         * 时间基TimeBase理解：例如：（fps25 一秒钟25帧， 那么每一帧==25分之1，而25分之1就是时间基概念）
+         * frame->best_effort_timestamp // 时间有单位：微妙 毫秒 秒 等，但是在FFmpeg里面有自己的单位（时间基TimeBase）
+         * */
 
         /*
           typedef struct AVRational{
@@ -376,7 +389,7 @@ void AudioChannel::audio_play() {
            outputMixEnvironmentalReverb, &settings);
     }
     */
-    LOGI("2、设置混音器 Success");
+    LOGI("设置混音器 Success");
 
     /*创建播放器  创建buffer缓存类型的队列  2的队列大小*/
     SLDataLocator_AndroidSimpleBufferQueue loc_bufq = {SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE,
@@ -468,7 +481,7 @@ void AudioChannel::audio_play() {
 
     /*手动激活回调函数*/
     bqPlayerCallback(bqPlayerBufferQueue, this);
-    LOGI("6、手动激活回调函数 Success");
+    LOGI("手动激活回调函数 Success");
 }
 
 

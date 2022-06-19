@@ -185,7 +185,7 @@ void MSPlayer::prepare_() {
         if (parameters->codec_type == AVMediaType::AVMEDIA_TYPE_AUDIO) {
             /*初始化音频通道对象*/
             audio_channel = new AudioChannel(i, codecContext, time_base);
-            /*非直播，才有意义把 JNICallbackHelper传递过去*/
+            /*非直播，JNICallbackHelper传递过去*/
             if (this->duration != 0) {
                 audio_channel->setJNICallbakcHelper(helper);
             }

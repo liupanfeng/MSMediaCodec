@@ -224,10 +224,9 @@ void renderFrame(uint8_t * src_data, int width, int height, int src_lineSize) {
     int dst_linesize = window_buffer.stride * 4;
 
     for (int i = 0; i < window_buffer.height; ++i) { // 一行一行显示
-        // memcpy(dst_data + i * 1704, src_data + i * 1704, 1704); // 花屏
-        // 花屏原因：1704 无法 64字节对齐，所以花屏
+        /*memcpy(dst_data + i * 1704, src_data + i * 1704, 1704); // 花屏*/
+        /*花屏原因：1704 无法 64字节对齐，所以花屏*/
 
-        // 通用的
         memcpy(dst_data + i * dst_linesize, src_data + i * src_lineSize, dst_linesize); // OK的
     }
 
