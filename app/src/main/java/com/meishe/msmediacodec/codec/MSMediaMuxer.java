@@ -62,16 +62,9 @@ public class MSMediaMuxer {
     private volatile boolean mLoop;
     private Disposable mSubscribe;
 
-    private MSMediaMuxer() {
+    public MSMediaMuxer() {
     }
 
-    public static MSMediaMuxer getInstance() {
-        return Helper.instance;
-    }
-
-    private static class Helper{
-        private static MSMediaMuxer instance=new MSMediaMuxer();
-    }
 
     /**
      * 初始化混合器
@@ -90,8 +83,10 @@ public class MSMediaMuxer {
             e.printStackTrace();
             Log.e(TAG, " init MediaMuxer error: "+e.toString());
         }
-        mVideoChannel = MSVideoChannel.getInstance();
-        mAudioChannel = MSAudioChannel.getInstance();
+//        mVideoChannel = MSVideoChannel.getInstance();
+        mVideoChannel = new MSVideoChannel();
+//        mAudioChannel = MSAudioChannel.getInstance();
+        mAudioChannel = new MSAudioChannel();
         mAVEncoder = MSMediaCodec.getInstance();
         setListener();
         mSubscribe = Observable.just(1).observeOn(Schedulers.io()).subscribe(new Consumer<Integer>() {

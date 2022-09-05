@@ -55,6 +55,7 @@ public class CaptureActivity extends AppCompatActivity implements View.OnClickLi
     private MSVideoChannel mMsVideoChannel;
     private String mFilePath;
     private Disposable mDisposable;
+    private MSYuvHelper mMsYuvHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,7 +72,8 @@ public class CaptureActivity extends AppCompatActivity implements View.OnClickLi
         initView();
         initMuxer();
         requestPermission();
-        MSYuvHelper.getInstance().startYuvEngine();
+        mMsYuvHelper = new MSYuvHelper();
+        mMsYuvHelper.startYuvEngine();
         initListener();
     }
 
@@ -101,7 +103,7 @@ public class CaptureActivity extends AppCompatActivity implements View.OnClickLi
     private void initMuxer() {
         String dirPath = PathUtils.getRecordDir();
         mFilePath = dirPath + FileUtil.getMp4FileName(System.currentTimeMillis());
-        mMediaMuxer = MSMediaMuxer.getInstance();
+        mMediaMuxer = new MSMediaMuxer();
         mMediaMuxer.initMediaMuxer(mFilePath);
         Log.d(TAG, "initMediaMuxer mFilePath:" + mFilePath);
     }
@@ -206,21 +208,19 @@ public class CaptureActivity extends AppCompatActivity implements View.OnClickLi
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (mIsStarted) {
-            mIsStarted = false;
-            if (mMediaMuxer != null) {
-                //停止编码 先要停止编码，然后停止采集
-                mMediaMuxer.stopEncoder();
-                //停止音频采集
-                mMediaMuxer.stopAudioGather();
-                //释放编码器
-                mMediaMuxer.release();
-                mMediaMuxer = null;
-            }
+        mIsStarted = false;
+        if (mMediaMuxer != null) {
+            //停止编码 先要停止编码，然后停止采集
+            mMediaMuxer.stopEncoder();
+            //停止音频采集
+            mMediaMuxer.stopAudioGather();
+            //释放编码器
+            mMediaMuxer.release();
+            mMediaMuxer = null;
         }
         mMsVideoChannel.doStopCamera();
         mMsVideoChannel = null;
-        MSYuvHelper.getInstance().stopYuvEngine();
+        mMsYuvHelper.stopYuvEngine();
     }
 
     @Override
@@ -273,6 +273,7 @@ public class CaptureActivity extends AppCompatActivity implements View.OnClickLi
             mMsVideoChannel.doStopCamera();
         }
     }
+
 
 
 }

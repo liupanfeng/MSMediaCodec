@@ -17,7 +17,7 @@ public class MSYuvHelper {
      */
     private long mCPtr;
 
-    private MSYuvHelper() {
+    public MSYuvHelper() {
         mCPtr = 0;
     }
 

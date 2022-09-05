@@ -52,7 +52,7 @@ public class MSVideoChannel {
     private int mPreviewDefaultHeight = 1080;
     private float mPreviewScale;
 
-    private MSVideoChannel() {
+    public MSVideoChannel() {
         mPreviewScale = mPreviewDefaultHeight * 1f / mPreviewDefaultWidth;
     }
 

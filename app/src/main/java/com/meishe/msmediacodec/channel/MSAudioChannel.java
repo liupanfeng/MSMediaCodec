@@ -45,7 +45,7 @@ public class MSAudioChannel {
         private static MSAudioChannel instance = new MSAudioChannel();
     }
 
-    private MSAudioChannel() {}
+    public MSAudioChannel() {}
 
     public void prepareAudioRecord() {
         if (mAudioRecord != null) {
