@@ -7,10 +7,12 @@ import android.media.MediaFormat
  *
  * @Author: lpf
  * @CreateDate: 2022/9/5 下午6:31
- * @Description:
+ * @Description:  定义了解码器的一些基础操作，如暂停/继续/停止解码，获取视频的时长，视频的宽高，解码状态等等
+ * 这里使用的是同步模式解码，需要不断循环压入和拉取数据，是一个耗时操作，因此，我们将解码器定义为一
+个Runnable，最后放到线程池中执行。
  * @Copyright: www.meishesdk.com Inc. All rights reserved.
  */
-interface IDecoder {
+interface IDecoder :Runnable{
 
     /**
      * 暂停解码
@@ -45,7 +47,7 @@ interface IDecoder {
     /**
      * 设置状态监听器
      */
-//    fun setStateListener(l: IDecoderStateListener?)
+    fun setStateListener(l: IDecoderStateListener?)
 
     /**
      * 获取视频宽
