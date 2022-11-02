@@ -19,6 +19,9 @@ import io.reactivex.schedulers.Schedulers;
  * @Copyright :www.meishesdk.com Inc.All rights reserved.
  */
 public class MSAudioChannel {
+
+    private static MSAudioChannel instance;
+
     private static final String TAG = "MSAudioChannel";
     /**
      * 音频录制借助AudioRecord
@@ -38,14 +41,14 @@ public class MSAudioChannel {
     private Disposable mSubscribe;
 
     public static MSAudioChannel getInstance() {
-        return Helper.instance;
+        if (instance==null){
+            instance=new MSAudioChannel();
+        }
+        return instance;
     }
 
-    private static class Helper {
-        private static MSAudioChannel instance = new MSAudioChannel();
-    }
 
-    public MSAudioChannel() {}
+    private MSAudioChannel() {}
 
     public void prepareAudioRecord() {
         if (mAudioRecord != null) {
@@ -157,7 +160,6 @@ public class MSAudioChannel {
         }
         mAudioRecord = null;
         mCallback = null;
-        Helper.instance = null;
         mSubscribe=null;
     }
 

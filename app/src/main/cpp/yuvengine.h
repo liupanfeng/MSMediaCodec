@@ -1,6 +1,3 @@
-//
-// Created by zhongjihao on 19-8-26.
-//
 
 #ifndef YUVENGINE_H
 #define YUVENGINE_H

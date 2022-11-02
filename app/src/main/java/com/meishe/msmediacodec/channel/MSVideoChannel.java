@@ -24,6 +24,9 @@ import static android.hardware.Camera.Parameters.PREVIEW_FPS_MIN_INDEX;
  */
 public class MSVideoChannel {
     private static final String TAG = "VideoGather";
+
+    private static MSVideoChannel instance;
+
     private int mWidth;
     private int mHeight;
     private int mFrameRate;
@@ -52,21 +55,21 @@ public class MSVideoChannel {
     private int mPreviewDefaultHeight = 1080;
     private float mPreviewScale;
 
+    public static MSVideoChannel getInstance() {
+        if (instance == null) {
+            instance = new MSVideoChannel();
+        }
+        return instance;
+    }
+
     public MSVideoChannel() {
         mPreviewScale = mPreviewDefaultHeight * 1f / mPreviewDefaultWidth;
     }
 
     public interface Callback {
-         void videoData(byte[] data);
+        void videoData(byte[] data);
     }
 
-    public static MSVideoChannel getInstance() {
-        return Helper.instance;
-    }
-
-    private static class Helper{
-        private static MSVideoChannel instance=new MSVideoChannel();
-    }
 
     public void setCallback(Callback callback) {
         mCallback = callback;
@@ -74,14 +77,14 @@ public class MSVideoChannel {
 
     public void openCamera(Activity activity, SurfaceHolder surfaceHolder) {
         Log.d(TAG, "Camera open....");
-        if(mCamera != null){
+        if (mCamera != null) {
             return;
         }
         mCamera = Camera.open();
         if (mCamera == null) {
             throw new RuntimeException("Unable to open camera");
         }
-        startPreview(activity,surfaceHolder);
+        startPreview(activity, surfaceHolder);
     }
 
     private void startPreview(Activity activity, SurfaceHolder surfaceHolder) {
@@ -101,18 +104,18 @@ public class MSVideoChannel {
         mCamera.autoFocus(new Camera.AutoFocusCallback() {
             @Override
             public void onAutoFocus(boolean success, Camera camera) {
-                Log.d(TAG, "onAutoFocus success: "+success);
+                Log.d(TAG, "onAutoFocus success: " + success);
             }
         });
         Log.d(TAG, "----Camera Preview Started----");
     }
 
     public void doStopCamera() {
-        Log.d(TAG, "doStopCamera-------mCamera: "+mCamera);
+        Log.d(TAG, "doStopCamera-------mCamera: " + mCamera);
         if (mCamera != null) {
             mCamera.setPreviewCallbackWithBuffer(null);
             mCameraPreviewCallback = null;
-            if (mIsPreviewing){
+            if (mIsPreviewing) {
                 mCamera.stopPreview();
             }
             mIsPreviewing = false;
@@ -124,6 +127,7 @@ public class MSVideoChannel {
 
     /**
      * 设置拍摄参数
+     *
      * @param surfaceHolder
      */
     private void setCameraParameter(SurfaceHolder surfaceHolder) {
@@ -175,22 +179,23 @@ public class MSVideoChannel {
                 }
             }
             /*设置相机预览帧率*/
-            mCameraParamters.setPreviewFpsRange(defMinFps,defMaxFps);
+            mCameraParamters.setPreviewFpsRange(defMinFps, defMaxFps);
             mFrameRate = defMaxFps / 1000;
             surfaceHolder.setFixedSize(mPreviewSize.width, mPreviewSize.height);
             mCameraPreviewCallback = new CameraPreviewCallback();
             /*设置缓冲区大小*/
-            mCamera.addCallbackBuffer(new byte[mPreviewSize.width * mPreviewSize.height*3/2]);
+            mCamera.addCallbackBuffer(new byte[mPreviewSize.width * mPreviewSize.height * 3 / 2]);
             mCamera.setPreviewCallbackWithBuffer(mCameraPreviewCallback);
             mCamera.setParameters(mCameraParamters);
 
-            Log.d(TAG, "defMinFps=" + defMinFps+" defMaxFps: "+defMaxFps);
-            Log.d(TAG, "mWidth:" + mWidth +"  mHeight: "+ mHeight +"  mFrameRate: "+ mFrameRate);
+            Log.d(TAG, "defMinFps=" + defMinFps + " defMaxFps: " + defMaxFps);
+            Log.d(TAG, "mWidth:" + mWidth + "  mHeight: " + mHeight + "  mFrameRate: " + mFrameRate);
         }
     }
 
     /**
      * 得到合适的尺寸
+     *
      * @param sizes
      * @param type
      * @return
@@ -222,10 +227,11 @@ public class MSVideoChannel {
 
     /**
      * 相机显示方向
+     *
      * @param activity
      * @param cameraId
      */
-    private void setCameraDisplayOrientation(Activity activity,int cameraId) {
+    private void setCameraDisplayOrientation(Activity activity, int cameraId) {
         Camera.CameraInfo info =
                 new Camera.CameraInfo();
         Camera.getCameraInfo(cameraId, info);
@@ -257,24 +263,25 @@ public class MSVideoChannel {
             result = (info.orientation - degrees + 360) % 360;
         }
         mCamera.setDisplayOrientation(result);
-        Log.d(TAG, "setCameraDisplayOrientation----result:" + result+" rotation: "+rotation+"  degrees: "+degrees+"  orientation: "+info.orientation);
+        Log.d(TAG, "setCameraDisplayOrientation----result:" + result + " rotation: " + rotation + "  degrees: " + degrees + "  orientation: " + info.orientation);
     }
 
     class CameraPreviewCallback implements Camera.PreviewCallback {
-        private CameraPreviewCallback() { }
+        private CameraPreviewCallback() {
+        }
 
         @Override
         public void onPreviewFrame(byte[] data, Camera camera) {
             Camera.Size size = camera.getParameters().getPreviewSize();
             /*丢给VideoRunnable线程,使用MediaCodec进行h264编码操作*/
-            if(data != null){
-                if(mCallback != null){
+            if (data != null) {
+                if (mCallback != null) {
                     /*将视频YUV NV21的数据 添加到编码器的链表阻塞队列中去 等待进行编码*/
                     mCallback.videoData(data);
                 }
                 camera.addCallbackBuffer(data);
             } else {
-                camera.addCallbackBuffer(new byte[size.width * size.height *3/2]);
+                camera.addCallbackBuffer(new byte[size.width * size.height * 3 / 2]);
             }
         }
     }

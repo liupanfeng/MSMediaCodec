@@ -72,7 +72,7 @@ public class CaptureActivity extends AppCompatActivity implements View.OnClickLi
         initView();
         initMuxer();
         requestPermission();
-        mMsYuvHelper = new MSYuvHelper();
+        mMsYuvHelper = MSYuvHelper.getInstance();
         mMsYuvHelper.startYuvEngine();
         initListener();
     }

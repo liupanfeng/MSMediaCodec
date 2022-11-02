@@ -12,6 +12,7 @@ import com.meishe.msmediacodec.MSYuvOperateJni;
  */
 public class MSYuvHelper {
 
+    private static MSYuvHelper instance;
     /**
      * c++ YuvEngine 对象的指针
      */
@@ -21,12 +22,12 @@ public class MSYuvHelper {
         mCPtr = 0;
     }
 
-    private static class Helper{
-        private static MSYuvHelper instance=new MSYuvHelper();
-    }
 
     public static MSYuvHelper getInstance(){
-        return Helper.instance;
+       if (instance==null){
+           instance=new MSYuvHelper();
+       }
+       return instance;
     }
 
     /**
@@ -132,7 +133,6 @@ public class MSYuvHelper {
         if (mCPtr != 0) {
             MSYuvOperateJni.stopYuvEngine(mCPtr);
         }
-        Helper.instance = null;
     }
 
 

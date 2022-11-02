@@ -83,10 +83,8 @@ public class MSMediaMuxer {
             e.printStackTrace();
             Log.e(TAG, " init MediaMuxer error: "+e.toString());
         }
-//        mVideoChannel = MSVideoChannel.getInstance();
-        mVideoChannel = new MSVideoChannel();
-//        mAudioChannel = MSAudioChannel.getInstance();
-        mAudioChannel = new MSAudioChannel();
+        mVideoChannel = MSVideoChannel.getInstance();
+        mAudioChannel = MSAudioChannel.getInstance();
         mAVEncoder = MSMediaCodec.getInstance();
         setListener();
         mSubscribe = Observable.just(1).observeOn(Schedulers.io()).subscribe(new Consumer<Integer>() {
