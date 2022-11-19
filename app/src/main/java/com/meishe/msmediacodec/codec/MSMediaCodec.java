@@ -77,7 +77,7 @@ public class MSMediaCodec {
      * 视频媒体格式
      */
     private MediaFormat mVideoFormat;
-    private int mColorFormat = 0;
+//    private int mColorFormat = 0;
     private MediaCodec.BufferInfo mVideoBufferInfo;
     private ArrayList<Integer> mSupportColorFormatList;
     private volatile boolean mVideoEncoderLoop = false;
@@ -187,16 +187,16 @@ public class MSMediaCodec {
      * @param fps 帧率
      */
     public void initVideoEncoder(int width, int height,int fps) {
-        if (mVideoMediaCodec != null) {
+        if (mVideoMediaCodec != null) {  //如果已经初始化过了，就不用再初始化了
             return;
         }
         this.mWidth = width;
-        this.mHeight = height;
+        this.mHeight = height;  //得到宽 高
         /*初始化 视频阻塞队列*/
         mVideoLinkedBlockQueue = new LinkedBlockingQueue<>();
         /*颜色格式列表*/
         mSupportColorFormatList = new ArrayList<>();
-        mRotateYuvBuffer = new byte[this.mWidth * this.mHeight * 3 / 2];
+        mRotateYuvBuffer = new byte[this.mWidth * this.mHeight * 3 / 2];   //视频buffer的大小是  宽*高*1.5  yuv420
         mYuvBuffer = new byte[this.mWidth * this.mHeight * 3 / 2];
         Log.d(TAG, "mWidth: "+mWidth+"  mHeight: "+mHeight);
 
@@ -210,18 +210,18 @@ public class MSMediaCodec {
         /*根据MIME格式,选择颜色格式*/
         selectColorFormat(codecInfo, VIDEO_MIME_TYPE);
 
-        for (int i = 0; i < mSupportColorFormatList.size(); i++) {
-            if (isRecognizedFormat(mSupportColorFormatList.get(i))) {
-                mColorFormat = mSupportColorFormatList.get(i);
-                break;
-            }
-        }
+//        for (int i = 0; i < mSupportColorFormatList.size(); i++) {
+//            if (isRecognizedFormat(mSupportColorFormatList.get(i))) {
+//                mColorFormat = mSupportColorFormatList.get(i);
+//                break;
+//            }
+//        }
 
-        if(mColorFormat == 0){
-            Log.e(TAG, "couldn't find a good color format for " + codecInfo.getName()
-                            + " / " + VIDEO_MIME_TYPE);
-            return;
-        }
+//        if(mColorFormat == 0){
+//            Log.e(TAG, "couldn't find a good color format for " + codecInfo.getName()
+//                            + " / " + VIDEO_MIME_TYPE);
+//            return;
+//        }
 
         /*
         *根据MIME创建MediaFormat
@@ -234,12 +234,12 @@ public class MSMediaCodec {
         mVideoFormat.setInteger(MediaFormat.KEY_BIT_RATE, bitrate);
         /*设置帧率,将编码帧率设为Camera实际帧率fps*/
         mVideoFormat.setInteger(MediaFormat.KEY_FRAME_RATE, fps);
-        /*设置颜色格式*/
-        mVideoFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, mColorFormat);
+//        /*设置颜色格式*/
+//        mVideoFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, mColorFormat);
         //设置关键帧的时间
         mVideoFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, IFRAME_INTERVAL);
 
-        Log.d(TAG,"mColorFormat"+mColorFormat);
+//        Log.d(TAG,"mColorFormat"+mColorFormat);
         Log.d(TAG, "videoFormat: " + mVideoFormat.toString());
 
         try {
@@ -471,26 +471,31 @@ public class MSMediaCodec {
      */
     private void encodeVideoData(byte[] input) {
         /*input为Camera预览格式NV21数据*/
-        if (mColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar) {
-            Log.d(TAG,"encodeVideoData mColorFormat---"+MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar);
-            /*nv21格式转为nv12格式*/
-            MSYuvHelper.getInstance().Nv21ToNv12(input, mYuvBuffer, mWidth, mHeight);
-            MSYuvHelper.getInstance().Nv12ClockWiseRotate90(mYuvBuffer, mWidth, mHeight, mRotateYuvBuffer, mOutWidth, mOutHeight);
-        } else if (mColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar) {
-            Log.d(TAG,"encodeVideoData mColorFormat---"+MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar);
-            /*用于NV21格式转换为I420(YUV420P)格式*/
-            MSYuvHelper.getInstance().Nv21ToI420(input, mYuvBuffer, mWidth, mHeight);
-            MSYuvHelper.getInstance().I420ClockWiseRotate90(mYuvBuffer, mWidth, mHeight, mRotateYuvBuffer, mOutWidth, mOutHeight);
-        } else if (mColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedSemiPlanar) {
-            Log.d(TAG,"encodeVideoData mColorFormat-----------"+MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedSemiPlanar);
-            System.arraycopy(input, 0, mYuvBuffer, 0, mWidth * mHeight * 3 / 2);
-            MSYuvHelper.getInstance().Nv21ClockWiseRotate90(mYuvBuffer, mWidth, mHeight, mRotateYuvBuffer, mOutWidth, mOutHeight);
-        }else if (mColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedPlanar) {
-            Log.d(TAG,"encodeVideoData mColorFormat----"+MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedPlanar);
-            /*用于NV21格式转换为YV12格式*/
-            MSYuvHelper.getInstance().Nv21ToYv12(input, mYuvBuffer, mWidth, mHeight);
-            MSYuvHelper.getInstance().Yv12ClockWiseRotate90(mYuvBuffer, mWidth, mHeight, mRotateYuvBuffer, mOutWidth, mOutHeight);
-        }
+//        if (mColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar) {
+//            Log.d(TAG,"encodeVideoData mColorFormat---"+MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar);
+//            /*nv21格式转为nv12格式*/
+//            MSYuvHelper.getInstance().Nv21ToNv12(input, mYuvBuffer, mWidth, mHeight);
+//            MSYuvHelper.getInstance().Nv12ClockWiseRotate90(mYuvBuffer, mWidth, mHeight, mRotateYuvBuffer, mOutWidth, mOutHeight);
+//        } else if (mColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar) {
+//            Log.d(TAG,"encodeVideoData mColorFormat---"+MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar);
+//            /*用于NV21格式转换为I420(YUV420P)格式*/
+//            MSYuvHelper.getInstance().Nv21ToI420(input, mYuvBuffer, mWidth, mHeight);
+//            MSYuvHelper.getInstance().I420ClockWiseRotate90(mYuvBuffer, mWidth, mHeight, mRotateYuvBuffer, mOutWidth, mOutHeight);
+//        } else if (mColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedSemiPlanar) {
+//            Log.d(TAG,"encodeVideoData mColorFormat-----------"+MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedSemiPlanar);
+//            System.arraycopy(input, 0, mYuvBuffer, 0, mWidth * mHeight * 3 / 2);
+//            MSYuvHelper.getInstance().Nv21ClockWiseRotate90(mYuvBuffer, mWidth, mHeight, mRotateYuvBuffer, mOutWidth, mOutHeight);
+//        }else if (mColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedPlanar) {
+//            Log.d(TAG,"encodeVideoData mColorFormat----"+MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedPlanar);
+//            /*用于NV21格式转换为YV12格式*/
+//            MSYuvHelper.getInstance().Nv21ToYv12(input, mYuvBuffer, mWidth, mHeight);
+//            MSYuvHelper.getInstance().Yv12ClockWiseRotate90(mYuvBuffer, mWidth, mHeight, mRotateYuvBuffer, mOutWidth, mOutHeight);
+//        }
+
+        Log.d(TAG,"encodeVideoData mColorFormat---"+MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar);
+        /*用于NV21格式转换为I420(YUV420P)格式*/
+        MSYuvHelper.getInstance().Nv21ToI420(input, mYuvBuffer, mWidth, mHeight);
+        MSYuvHelper.getInstance().I420ClockWiseRotate90(mYuvBuffer, mWidth, mHeight, mRotateYuvBuffer, mOutWidth, mOutHeight);
 
         try {
             /*拿到输入缓冲区,用于传送数据进行编码*/

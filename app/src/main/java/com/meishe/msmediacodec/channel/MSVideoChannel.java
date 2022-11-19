@@ -1,5 +1,8 @@
 package com.meishe.msmediacodec.channel;
 
+import static android.hardware.Camera.Parameters.PREVIEW_FPS_MAX_INDEX;
+import static android.hardware.Camera.Parameters.PREVIEW_FPS_MIN_INDEX;
+
 import android.app.Activity;
 import android.graphics.ImageFormat;
 import android.hardware.Camera;
@@ -10,9 +13,6 @@ import android.view.SurfaceHolder;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-
-import static android.hardware.Camera.Parameters.PREVIEW_FPS_MAX_INDEX;
-import static android.hardware.Camera.Parameters.PREVIEW_FPS_MIN_INDEX;
 
 /**
  * * All rights reserved,Designed by www.meishesdk.com
@@ -80,7 +80,7 @@ public class MSVideoChannel {
         if (mCamera != null) {
             return;
         }
-        mCamera = Camera.open();
+        mCamera = Camera.open(Camera.CameraInfo.CAMERA_FACING_FRONT);
         if (mCamera == null) {
             throw new RuntimeException("Unable to open camera");
         }
@@ -91,7 +91,7 @@ public class MSVideoChannel {
         if (mIsPreviewing) {
             return;
         }
-        setCameraDisplayOrientation(activity, Camera.CameraInfo.CAMERA_FACING_BACK);
+        setCameraDisplayOrientation(activity, Camera.CameraInfo.CAMERA_FACING_FRONT);  //这里负责的是预览的方向
         setCameraParameter(surfaceHolder);
         try {
             /*通过SurfaceView显示取景画面*/

@@ -19,11 +19,15 @@
         android:theme="@style/Theme.MSMediaCodec">
         <activity
             android:name=".activity.MSEditActivity"
+            android:theme="@style/Theme.MSMediaCodec"
             android:exported="false" />
         <activity
             android:name=".activity.MSPlayerActivity"
+            android:theme="@style/Theme.MSMediaCodec"
             android:label="播放页面" />
-        <activity android:name=".activity.LaunchActivity" >
+        <activity android:name=".activity.LaunchActivity"
+            android:theme="@style/Theme.MSMediaCodec"
+            >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -32,6 +36,7 @@
         </activity>
         <activity
             android:name=".activity.CaptureActivity"
+            android:theme="@style/Theme.MSMediaCodec"
             android:label="录制页面">
 
         </activity>
