@@ -1,10 +1,10 @@
 package com.meishe.msmediacodec.activity;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.hjq.permissions.OnPermissionCallback;
 import com.hjq.permissions.Permission;
@@ -49,5 +49,9 @@ public class LaunchActivity extends AppCompatActivity {
 
     public void onStartRecord(View view) {
         startActivity(new Intent(this, CaptureActivity.class));
+    }
+
+    public void onMediaCodecPlay(View view) {
+        startActivity(new Intent(this, MediaCodecDecodeActivity.class));
     }
 }

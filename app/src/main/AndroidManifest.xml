@@ -18,16 +18,24 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MSMediaCodec">
         <activity
-            android:name=".activity.MSEditActivity"
+            android:name=".activity.MediaCodecDecodeActivity"
             android:theme="@style/Theme.MSMediaCodec"
-            android:exported="false" />
+            android:exported="false">
+            <meta-data
+                android:name="android.app.lib_name"
+                android:value="" />
+        </activity>
+        <activity
+            android:name=".activity.MSEditActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MSMediaCodec" />
         <activity
             android:name=".activity.MSPlayerActivity"
-            android:theme="@style/Theme.MSMediaCodec"
-            android:label="播放页面" />
-        <activity android:name=".activity.LaunchActivity"
-            android:theme="@style/Theme.MSMediaCodec"
-            >
+            android:label="播放页面"
+            android:theme="@style/Theme.MSMediaCodec" />
+        <activity
+            android:name=".activity.LaunchActivity"
+            android:theme="@style/Theme.MSMediaCodec">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -36,10 +44,8 @@
         </activity>
         <activity
             android:name=".activity.CaptureActivity"
-            android:theme="@style/Theme.MSMediaCodec"
-            android:label="录制页面">
-
-        </activity>
+            android:label="录制页面"
+            android:theme="@style/Theme.MSMediaCodec"></activity>
 
         <meta-data
             android:name="ScopedStorage"
