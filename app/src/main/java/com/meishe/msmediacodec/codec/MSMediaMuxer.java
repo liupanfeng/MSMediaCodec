@@ -220,9 +220,9 @@ public class MSMediaMuxer {
     private void setListener() {
         mVideoChannel.setCallback(new MSVideoChannel.Callback() {
             @Override
-            public void videoData(byte[] data) {
+            public void videoData(byte[] data) {  //这里的数据是从相机里边回调过来的NV21的数据
                 if (mAVEncoder != null){
-                    mAVEncoder.putVideoData(data);
+                    mAVEncoder.putVideoData(data);   //将数据加载到队列中去
                 }
             }
         });
