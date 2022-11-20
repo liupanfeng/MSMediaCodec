@@ -180,7 +180,7 @@ public class MSVideoChannel {
             }
             /*设置相机预览帧率*/
             mCameraParamters.setPreviewFpsRange(defMinFps, defMaxFps);
-            mFrameRate = defMaxFps / 1000;
+            mFrameRate = 30;
             surfaceHolder.setFixedSize(mPreviewSize.width, mPreviewSize.height);
             mCameraPreviewCallback = new CameraPreviewCallback();
             /*设置缓冲区大小*/
@@ -277,7 +277,8 @@ public class MSVideoChannel {
             if (data != null) {
                 if (mCallback != null) {
                     /*将视频YUV NV21的数据 添加到编码器的链表阻塞队列中去 等待进行编码*/
-                    mCallback.videoData(data);
+//                    mCallback.videoData(data);
+                    mCallback.videoData(NV21_TO_yuv420P(new byte[size.width * size.height * 3 / 2],data,size.width, size.height));
                 }
                 camera.addCallbackBuffer(data);
             } else {
@@ -297,4 +298,46 @@ public class MSVideoChannel {
     public int getFrameRate() {
         return mFrameRate;
     }
+
+
+    public byte[] NV21_TO_yuv420P(byte[] dst, byte[] src, int w, int h) {
+        int ysize = w * h;
+        int usize = w * h * 1 / 4;
+
+        byte[] dsttmp = dst;
+
+        // y
+        System.arraycopy(src, 0, dst, 0, ysize);
+
+        // u, 1/4
+        int srcPointer = ysize;
+        int dstPointer = ysize;
+        int count = usize;
+        while (count > 0) {
+            srcPointer++;
+            dst[dstPointer] = src[srcPointer];
+            dstPointer++;
+            srcPointer++;
+            count--;
+        }
+
+        // v, 1/4
+        srcPointer = ysize;
+
+        count = usize;
+        while (count > 0) {
+            dst[dstPointer] = src[srcPointer];
+            dstPointer++;
+            srcPointer += 2;
+            count--;
+        }
+
+        dst = dsttmp;
+
+        // _EF_TIME_DEBUG_END(0x000414141);
+
+        return dst;
+    }
+
+
 }

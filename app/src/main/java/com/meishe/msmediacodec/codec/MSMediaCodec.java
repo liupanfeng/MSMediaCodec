@@ -11,7 +11,6 @@ import com.meishe.msmediacodec.helper.MSYuvHelper;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import io.reactivex.Observable;
@@ -52,10 +51,7 @@ public class MSMediaCodec {
      * I 帧 10 between
      */
     private static final int IFRAME_INTERVAL = 5;
-    /**
-     * 预览格式转换后的数据
-     */
-    private byte[] mYuvBuffer;
+
     /**
      * 旋转后的数据和分辨率
      */
@@ -79,7 +75,6 @@ public class MSMediaCodec {
     private MediaFormat mVideoFormat;
 //    private int mColorFormat = 0;
     private MediaCodec.BufferInfo mVideoBufferInfo;
-    private ArrayList<Integer> mSupportColorFormatList;
     private volatile boolean mVideoEncoderLoop = false;
     private volatile boolean mVideoEncoderEnd = false;
     /**
@@ -96,7 +91,6 @@ public class MSMediaCodec {
      */
     private MediaCodec mAudioMediaCodec;
     private MediaCodec.BufferInfo mBufferInfo;
-    private MediaCodecInfo mAudioCodecInfo;
     private MediaFormat mAudioFormat;
     private volatile boolean mAudioEncoderLoop = false;
     private volatile boolean mEncoderEnd = false;
@@ -148,12 +142,6 @@ public class MSMediaCodec {
         mBufferInfo = new MediaCodec.BufferInfo();
         /*初始化阻塞队列*/
         mAudioLinkedBlockQueue = new LinkedBlockingQueue<>();
-        /*根据类型选择一个音频编码器*/
-        mAudioCodecInfo = selectCodec(AUDIO_MIME_TYPE);
-        if (mAudioCodecInfo == null) {
-            Log.e(TAG, "Unable to find an appropriate codec for=" + AUDIO_MIME_TYPE);
-            return;
-        }
         /*根据 编码器类型、采样率、音频通道数量 创建音频媒体格式*/
         mAudioFormat = MediaFormat.createAudioFormat(AUDIO_MIME_TYPE, sampleRate, channelCount);
         /*如果内容是 AAC 音频，则指定所需的配置文件*/
@@ -170,7 +158,6 @@ public class MSMediaCodec {
         mAudioFormat.setInteger(MediaFormat.KEY_SAMPLE_RATE, sampleRate);
 
         Log.d(TAG, "mAudioFormat=" + mAudioFormat.toString());
-        Log.d(TAG, "selected codec=" + mAudioCodecInfo.getName());
         try {
             mAudioMediaCodec = MediaCodec.createEncoderByType(AUDIO_MIME_TYPE);
         } catch (IOException e) {
@@ -191,37 +178,13 @@ public class MSMediaCodec {
             return;
         }
         this.mWidth = width;
-        this.mHeight = height;  //得到宽 高
+        this.mHeight = height;
         /*初始化 视频阻塞队列*/
         mVideoLinkedBlockQueue = new LinkedBlockingQueue<>();
-        /*颜色格式列表*/
-        mSupportColorFormatList = new ArrayList<>();
         mRotateYuvBuffer = new byte[this.mWidth * this.mHeight * 3 / 2];   //视频buffer的大小是  宽*高*1.5  yuv420
-        mYuvBuffer = new byte[this.mWidth * this.mHeight * 3 / 2];
         Log.d(TAG, "mWidth: "+mWidth+"  mHeight: "+mHeight);
 
         mVideoBufferInfo = new MediaCodec.BufferInfo();
-        /*选择系统用于编码H264的编码器信息*/
-        MediaCodecInfo codecInfo = selectCodec(VIDEO_MIME_TYPE);
-        if (codecInfo == null) {
-            Log.e(TAG, "Unable to find an appropriate codec for " + VIDEO_MIME_TYPE);
-            return;
-        }
-        /*根据MIME格式,选择颜色格式*/
-        selectColorFormat(codecInfo, VIDEO_MIME_TYPE);
-
-//        for (int i = 0; i < mSupportColorFormatList.size(); i++) {
-//            if (isRecognizedFormat(mSupportColorFormatList.get(i))) {
-//                mColorFormat = mSupportColorFormatList.get(i);
-//                break;
-//            }
-//        }
-
-//        if(mColorFormat == 0){
-//            Log.e(TAG, "couldn't find a good color format for " + codecInfo.getName()
-//                            + " / " + VIDEO_MIME_TYPE);
-//            return;
-//        }
 
         /*
         *根据MIME创建MediaFormat
@@ -244,7 +207,7 @@ public class MSMediaCodec {
 
         try {
             /*创建一个MediaCodec*/
-            mVideoMediaCodec = MediaCodec.createByCodecName(codecInfo.getName());
+            mVideoMediaCodec = MediaCodec.createEncoderByType(VIDEO_MIME_TYPE);
         } catch (IOException e) {
             e.printStackTrace();
             throw new RuntimeException("createByCodecName error=", e);
@@ -252,44 +215,7 @@ public class MSMediaCodec {
         Log.d(TAG, String.format("MediaCodec:%s创建完成", mVideoMediaCodec.getName()));
     }
 
-    /**
-     * 选择一个颜色格式
-     * @param codecInfo
-     * @param mimeType
-     */
-    private void selectColorFormat(MediaCodecInfo codecInfo,
-                                        String mimeType) {
-        MediaCodecInfo.CodecCapabilities capabilities = codecInfo
-                .getCapabilitiesForType(mimeType);
-        mSupportColorFormatList.clear();
-        for (int i = 0; i < capabilities.colorFormats.length; i++) {
-            int colorFormat = capabilities.colorFormats[i];
-            Log.d(TAG, "color format: " + colorFormat);
-            mSupportColorFormatList.add(colorFormat);
-        }
-    }
 
-    /**
-     * 是否是认可的颜色格式
-     * @param colorFormat
-     * @return
-     */
-    private boolean isRecognizedFormat(int colorFormat) {
-        switch (colorFormat) {
-            /*对应Camera预览格式I420(YV21/YUV420P)*/
-            case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar:
-                /*对应Camera预览格式NV12*/
-            case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar:
-                /*对应Camera预览格式NV21*/
-            case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedSemiPlanar:
-                /*对应Camera预览格式YV12*/
-            case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedPlanar:{
-                return true;
-            }
-            default:
-                return false;
-        }
-    }
 
     /**
      * 根据类型选择一个编码器
@@ -470,47 +396,20 @@ public class MSMediaCodec {
      * @param input
      */
     private void encodeVideoData(byte[] input) {
-        /*input为Camera预览格式NV21数据*/
-//        if (mColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar) {
-//            Log.d(TAG,"encodeVideoData mColorFormat---"+MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar);
-//            /*nv21格式转为nv12格式*/
-//            MSYuvHelper.getInstance().Nv21ToNv12(input, mYuvBuffer, mWidth, mHeight);
-//            MSYuvHelper.getInstance().Nv12ClockWiseRotate90(mYuvBuffer, mWidth, mHeight, mRotateYuvBuffer, mOutWidth, mOutHeight);
-//        } else if (mColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar) {
-//            Log.d(TAG,"encodeVideoData mColorFormat---"+MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar);
-//            /*用于NV21格式转换为I420(YUV420P)格式*/
-//            MSYuvHelper.getInstance().Nv21ToI420(input, mYuvBuffer, mWidth, mHeight);
-//            MSYuvHelper.getInstance().I420ClockWiseRotate90(mYuvBuffer, mWidth, mHeight, mRotateYuvBuffer, mOutWidth, mOutHeight);
-//        } else if (mColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedSemiPlanar) {
-//            Log.d(TAG,"encodeVideoData mColorFormat-----------"+MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedSemiPlanar);
-//            System.arraycopy(input, 0, mYuvBuffer, 0, mWidth * mHeight * 3 / 2);
-//            MSYuvHelper.getInstance().Nv21ClockWiseRotate90(mYuvBuffer, mWidth, mHeight, mRotateYuvBuffer, mOutWidth, mOutHeight);
-//        }else if (mColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedPlanar) {
-//            Log.d(TAG,"encodeVideoData mColorFormat----"+MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedPlanar);
-//            /*用于NV21格式转换为YV12格式*/
-//            MSYuvHelper.getInstance().Nv21ToYv12(input, mYuvBuffer, mWidth, mHeight);
-//            MSYuvHelper.getInstance().Yv12ClockWiseRotate90(mYuvBuffer, mWidth, mHeight, mRotateYuvBuffer, mOutWidth, mOutHeight);
-//        }
 
-        Log.d(TAG,"encodeVideoData mColorFormat---"+MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar);
-        /*用于NV21格式转换为I420(YUV420P)格式*/
-        MSYuvHelper.getInstance().Nv21ToI420(input, mYuvBuffer, mWidth, mHeight);
-        MSYuvHelper.getInstance().I420ClockWiseRotate90(mYuvBuffer, mWidth, mHeight, mRotateYuvBuffer, mOutWidth, mOutHeight);
+        MSYuvHelper.getInstance().I420ClockWiseRotate90(input, mWidth, mHeight, mRotateYuvBuffer, mOutWidth, mOutHeight);
 
         try {
             /*拿到输入缓冲区,用于传送数据进行编码*/
             ByteBuffer[] inputBuffers = mVideoMediaCodec.getInputBuffers();
             /*得到当前有效的输入缓冲区的索引*/
             int inputBufferIndex = mVideoMediaCodec.dequeueInputBuffer(TIMEOUT_USEC);
-            Log.d(TAG, "Video inputBufferIndex:=" + inputBufferIndex+"  yuvLen= "+ mRotateYuvBuffer.length);
             if (inputBufferIndex >= 0) {
                 /*输入缓冲区有效*/
                 ByteBuffer inputBuffer = inputBuffers[inputBufferIndex];
                 inputBuffer.clear();
-                Log.d(TAG, "Video inputBufferIndex: " + inputBufferIndex+"  capacity: "+inputBuffer.capacity());
                 //往输入缓冲区写入数据
                 inputBuffer.put(mRotateYuvBuffer);
-                Log.d(TAG, "Video inputBufferIndex: " + inputBufferIndex+"  capacity: "+inputBuffer.capacity()+"  limit: "+inputBuffer.limit());
 
                 /*计算pts，这个值是一定要设置的*/
                 long pts = System.currentTimeMillis() * 1000 - mPresentationTimeUs;
@@ -557,14 +456,12 @@ public class MSMediaCodec {
 
                 if (mVideoBufferInfo.size != 0) {
                     if (null != mCallback && !mVideoEncoderEnd) {
+                        //这个就是需要编码的数据  这个是需要编码的数据的描述信息
                         mCallback.outputVideoFrame(MSMediaMuxer.TRACK_VIDEO,outputBuffer, mVideoBufferInfo);
                     }
                 }
                 /*释放资源*/
                 mVideoMediaCodec.releaseOutputBuffer(outputBufferIndex, false);
-                /*拿到输出缓冲区的索引*/
-                outputBufferIndex = mVideoMediaCodec.dequeueOutputBuffer(mVideoBufferInfo, 0);
-                /*编码结束的标志*/
                 if ((mVideoBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
                     Log.d(TAG, "Recv Video Encoder===BUFFER_FLAG_END_OF_STREAM=====" );
                     mVideoEncoderLoop = false;
